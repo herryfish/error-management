@@ -1,0 +1,299 @@
+import { Request, Response, NextFunction } from 'express'
+import { AppDataSource } from '../config/database'
+import { Question, Subject, QuestionType } from '../models/Question'
+import { LLMService } from '../services/LLMService'
+import { v4 as uuidv4 } from 'uuid'
+
+export class QuestionController {
+  private questionRepository = AppDataSource.getRepository(Question)
+  private llmService = new LLMService()
+
+  getAllQuestions = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const questions = await this.questionRepository.find({
+        order: { createdAt: 'DESC' },
+      })
+
+      res.json({
+        status: 'success',
+        data: questions,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  getQuestionById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params
+
+      const question = await this.questionRepository.findOne({
+        where: { id },
+        relations: ['redoRecords', 'masteryRecords', 'similarQuestions'],
+      })
+
+      if (!question) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Question not found',
+        })
+      }
+
+      res.json({
+        status: 'success',
+        data: question,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  createQuestion = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const {
+        title,
+        content,
+        subject,
+        type,
+        difficulty,
+        knowledgePoints,
+        answer,
+        explanation,
+      } = req.body
+
+      const imageUrl = req.file ? `/uploads/${req.file.filename}` : null
+      const userId = (req as any).user.id
+
+      const question = this.questionRepository.create({
+        title,
+        content,
+        subject,
+        type,
+        difficulty: parseInt(difficulty) || 1,
+        knowledgePoints: knowledgePoints ? JSON.parse(knowledgePoints) : [],
+        imageUrl,
+        answer,
+        explanation,
+        studentId: userId,
+        isIdentified: false,
+      })
+
+      await this.questionRepository.save(question)
+
+      res.status(201).json({
+        status: 'success',
+        data: question,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  updateQuestion = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params
+      const updateData = req.body
+
+      const question = await this.questionRepository.findOne({
+        where: { id },
+      })
+
+      if (!question) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Question not found',
+        })
+      }
+
+      // Update question
+      Object.assign(question, updateData)
+      await this.questionRepository.save(question)
+
+      res.json({
+        status: 'success',
+        data: question,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  deleteQuestion = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params
+
+      const question = await this.questionRepository.findOne({
+        where: { id },
+      })
+
+      if (!question) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Question not found',
+        })
+      }
+
+      await this.questionRepository.remove(question)
+
+      res.json({
+        status: 'success',
+        message: 'Question deleted successfully',
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  identifyQuestion = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'No image file provided',
+        })
+      }
+
+      const imageUrl = `/uploads/${req.file.filename}`
+      const userId = (req as any).user.id
+
+      // Call LLM to identify the question
+      const identificationResult = await this.llmService.identifyQuestion(
+        req.file.path,
+        userId
+      )
+
+      // Create question with identification results
+      const question = this.questionRepository.create({
+        title: identificationResult.title || 'Identified Question',
+        content: identificationResult.content || '',
+        subject: identificationResult.subject || Subject.MATH,
+        type: identificationResult.type || QuestionType.ANSWER,
+        difficulty: identificationResult.difficulty || 1,
+        knowledgePoints: identificationResult.knowledgePoints || [],
+        imageUrl: imageUrl || undefined,
+        originalImageUrl: imageUrl || undefined,
+        answer: identificationResult.answer,
+        explanation: identificationResult.explanation,
+        studentId: userId,
+        isIdentified: true,
+        confidence: identificationResult.confidence,
+      } as any)
+
+      await this.questionRepository.save(question)
+
+      res.status(201).json({
+        status: 'success',
+        data: {
+          question,
+          identification: identificationResult,
+        },
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  getQuestionsByStudent = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { studentId } = req.params
+
+      const questions = await this.questionRepository.find({
+        where: { studentId },
+        order: { createdAt: 'DESC' },
+      })
+
+      res.json({
+        status: 'success',
+        data: questions,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  searchQuestions = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { studentId, subject, type, difficulty, knowledgePoint, keyword } = req.query
+
+      const queryBuilder = this.questionRepository.createQueryBuilder('question')
+
+      if (studentId) {
+        queryBuilder.where('question.studentId = :studentId', { studentId })
+      }
+
+      if (subject) {
+        queryBuilder.andWhere('question.subject = :subject', { subject })
+      }
+
+      if (type) {
+        queryBuilder.andWhere('question.type = :type', { type })
+      }
+
+      if (difficulty) {
+        queryBuilder.andWhere('question.difficulty = :difficulty', { difficulty: parseInt(difficulty as string) })
+      }
+
+      if (knowledgePoint) {
+        queryBuilder.andWhere('JSON_CONTAINS(question.knowledgePoints, :kp)', { kp: JSON.stringify(knowledgePoint) })
+      }
+
+      if (keyword) {
+        queryBuilder.andWhere('(question.title LIKE :keyword OR question.content LIKE :keyword)', { keyword: `%${keyword}%` })
+      }
+
+      const questions = await queryBuilder.orderBy('question.createdAt', 'DESC').getMany()
+
+      res.json({
+        status: 'success',
+        data: questions,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  getQuestionStats = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { studentId } = req.params
+
+      const total = await this.questionRepository.count({
+        where: { studentId },
+      })
+
+      const bySubject = await this.questionRepository
+        .createQueryBuilder('question')
+        .select('question.subject', 'subject')
+        .addSelect('COUNT(*)', 'count')
+        .where('question.studentId = :studentId', { studentId })
+        .groupBy('question.subject')
+        .getRawMany()
+
+      const byDifficulty = await this.questionRepository
+        .createQueryBuilder('question')
+        .select('question.difficulty', 'difficulty')
+        .addSelect('COUNT(*)', 'count')
+        .where('question.studentId = :studentId', { studentId })
+        .groupBy('question.difficulty')
+        .getRawMany()
+
+      res.json({
+        status: 'success',
+        data: {
+          total,
+          bySubject,
+          byDifficulty,
+        },
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+}

@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    networks:
+      - frontend-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_USERNAME=${DB_USERNAME:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_DATABASE=${DB_DATABASE:-error_management}
+      - JWT_SECRET=${JWT_SECRET:-your-jwt-secret}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3001}
+      - LLM_PRIMARY_PROVIDER=${LLM_PRIMARY_PROVIDER:-openai}
+      - LLM_PRIMARY_MODEL=${LLM_PRIMARY_MODEL:-gpt-4-vision-preview}
+      - LLM_PRIMARY_API_KEY=${LLM_PRIMARY_API_KEY}
+      - LLM_PRIMARY_API_BASE=${LLM_PRIMARY_API_BASE:-https://api.openai.com/v1}
+      - LLM_FALLBACK_PROVIDER=${LLM_FALLBACK_PROVIDER}
+      - LLM_FALLBACK_MODEL=${LLM_FALLBACK_MODEL}
+      - LLM_FALLBACK_API_KEY=${LLM_FALLBACK_API_KEY}
+      - LLM_FALLBACK_API_BASE=${LLM_FALLBACK_API_BASE}
+      - LLM_FALLBACK_ENABLED=${LLM_FALLBACK_ENABLED:-true}
+      - LLM_FALLBACK_RETRY_COUNT=${LLM_FALLBACK_RETRY_COUNT:-2}
+      - LLM_FALLBACK_TIMEOUT_MS=${LLM_FALLBACK_TIMEOUT_MS:-30000}
+    volumes:
+      - uploads:/app/uploads
+    networks:
+      - frontend-net
+      - backend-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MariaDB database
+  mariadb:
+    image: mariadb:10.11
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-password}
+      - MYSQL_DATABASE=${DB_DATABASE:-error_management}
+      - MYSQL_USER=${DB_USERNAME:-root}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-password}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - backend-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - frontend-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mariadb-data:
+  uploads:
+
+networks:
+  frontend-net:
+    driver: bridge
+  backend-net:
+    driver: bridge
+    internal: true
