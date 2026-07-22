@@ -65,28 +65,26 @@ jobs:
           echo "应用修复: $ISSUE_TITLE"
           
           # 创建修复文档
-          cat > "FIX_ISSUE_${ISSUE_NUMBER}.md" << EOF
-# Issue #${ISSUE_NUMBER} 修复记录
-
-## Issue信息
-- **标题**: ${ISSUE_TITLE}
-- **修复时间**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-- **修复者**: GitHub Actions
-
-## 修复说明
-此Issue已被自动识别并记录。
-
-## 修复方案
-1. 分析Issue内容
-2. 创建修复分支
-3. 修改相关代码
-4. 创建PR等待审核
-
-## 下一步
-- [ ] 审核修复方案
-- [ ] 实施具体修复
-- [ ] 测试验证
-EOF
+          echo "# Issue #${ISSUE_NUMBER} 修复记录" > "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "## Issue信息" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "- **标题**: $ISSUE_TITLE" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "- **修复时间**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "- **修复者**: GitHub Actions" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "## 修复说明" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "此Issue已被自动识别并记录。" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "## 修复方案" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "1. 分析Issue内容" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "2. 创建修复分支" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "3. 修改相关代码" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "4. 创建PR等待审核" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "## 下一步" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "- [ ] 审核修复方案" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "- [ ] 实施具体修复" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
+          echo "- [ ] 测试验证" >> "FIX_ISSUE_${ISSUE_NUMBER}.md"
           
           echo "修复文件已创建: FIX_ISSUE_${ISSUE_NUMBER}.md"
       
