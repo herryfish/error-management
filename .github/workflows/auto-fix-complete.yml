@@ -114,6 +114,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "fix: 自动修复 Issue #${{ steps.analyze.outputs.issue_number }}"
           branch: ${{ steps.analyze.outputs.branch }}
+          base: master
           title: "fix: 自动修复 Issue #${{ steps.analyze.outputs.issue_number }}"
           body: |
             ## 🤖 自动修复
