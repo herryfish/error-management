@@ -1,0 +1,124 @@
+# AI Coding 工具配置文件
+# 此文件供AI Coding工具自动读取和配置
+
+# 项目信息
+project:
+  name: "错题管理系统"
+  repo: "herryfish/error-management"
+  description: "H5端错题管理系统，学生/家长1:1，支持数理化科目"
+
+# 技术栈
+tech_stack:
+  frontend: "Vue 3 + TypeScript + Pinia + Vant"
+  backend: "Node.js + Express + TypeScript"
+  database: "MariaDB"
+  orm: "TypeORM"
+  deployment: "Docker Compose + GitHub Actions"
+  llm: "支持多提供商配置，允许配置降级模型"
+
+# 自动化工作流程
+workflow:
+  # 本地AI工作流程
+  local_ai:
+    enabled: true
+    tools:
+      - name: "MiMo Code"
+        command: "mimo"
+        install: "npm install -g mimocode"
+      - name: "Claude Code"
+        command: "claude-code"
+        install: "npm install -g @anthropic-ai/claude-code"
+      - name: "Cursor"
+        command: "cursor"
+        install: "https://cursor.sh"
+    
+    # 工作流程脚本
+    scripts:
+      fix_issue: "./scripts/auto-fix-local.sh"
+      review_pr: "./scripts/auto-review-local.sh"
+      full_flow: "./scripts/auto-dev-local.sh"
+      setup_cron: "./scripts/setup-cron.sh"
+    
+    # 定时任务配置
+    cron:
+      enabled: true
+      schedule: "0 * * * *"  # 每小时执行一次
+      log_file: "/var/log/auto-dev.log"
+  
+  # GitHub Actions CI/CD
+  github_actions:
+    enabled: true
+    workflows:
+      - name: "auto-fix-complete"
+        file: ".github/workflows/auto-fix-complete.yml"
+        trigger: "issues: [opened, labeled]"
+      - name: "auto-review"
+        file: ".github/workflows/auto-review.yml"
+        trigger: "pull_request: [opened, synchronize, reopened]"
+      - name: "auto-release"
+        file: ".github/workflows/auto-release.yml"
+        trigger: "push: [main]"
+      - name: "ci"
+        file: ".github/workflows/ci.yml"
+        trigger: "push: [main, master], pull_request: [main, master]"
+
+# 代码规范
+coding_standards:
+  # 提交规范
+  commit:
+    format: "type: description"
+    types:
+      - "feat: 新功能"
+      - "fix: 修复bug"
+      - "docs: 文档更新"
+      - "style: 代码格式"
+      - "refactor: 重构"
+      - "test: 测试"
+      - "chore: 构建/工具"
+  
+  # 分支规范
+  branch:
+    prefix: "fix/issue-"
+    base: "master"
+  
+  # PR规范
+  pr:
+    title_format: "type: description"
+    body_template: |
+      ## 描述
+      [描述变更内容]
+      
+      ## 测试
+      - [ ] 本地测试通过
+      - [ ] 代码审查通过
+      
+      Closes #[issue_number]
+
+# 项目结构
+project_structure:
+  root: "."
+  frontend: "./frontend"
+  backend: "./backend"
+  database: "./database"
+  design: "./design"
+  scripts: "./scripts"
+  workflows: "./.github/workflows"
+
+# 环境要求
+requirements:
+  node: "18+"
+  python: "3.6+"
+  git: "latest"
+  github_cli: "latest"
+  docker: "latest"  # 可选
+  docker_compose: "latest"  # 可选
+
+# 访问链接
+links:
+  repository: "https://github.com/herryfish/error-management"
+  actions: "https://github.com/herryfish/error-management/actions"
+  issues: "https://github.com/herryfish/error-management/issues"
+  prs: "https://github.com/herryfish/error-management/pulls"
+  frontend: "http://localhost:3001"
+  backend: "http://localhost:3000"
+  nginx: "http://localhost:80"

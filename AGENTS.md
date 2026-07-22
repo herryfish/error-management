@@ -95,7 +95,48 @@ cd backend && npm install && npm run dev
 - 相似题触发：连续错2次。
 - “直接看解析”配置：全局开关。
 
+## AI Coding 自动化工作流程
+
+### 工作流程概览
+
+本项目支持本地AI工具自动化开发流程：
+
+1. **定时检查**：每小时检查GitHub Issues（auto-fix标签）
+2. **本地AI修复**：使用AI工具分析Issue并修改代码
+3. **本地AI审查**：使用AI工具审查PR代码
+4. **自动提交**：提交到GitHub并创建PR
+5. **自动合并**：审查通过后自动合并
+6. **CI/CD**：GitHub Actions自动构建、测试、部署
+
+### 快速开始
+
+```bash
+# 设置定时任务
+./scripts/setup-cron.sh setup
+
+# 手动运行完整流程
+./scripts/auto-dev-local.sh
+
+# 单独修复Issue
+./scripts/auto-fix-local.sh
+
+# 单独审查PR
+./scripts/auto-review-local.sh
+```
+
+### AI工具集成
+
+本项目支持多种AI Coding工具：
+
+- **MiMo Code**：默认工具
+- **Claude Code**：可替换
+- **Cursor**：可替换
+
+集成新工具只需修改脚本中的AI调用部分。
+
 ## 参考文档
+- `AI_CODING_WORKFLOW.md`：AI Coding自动化工作流程完整指南
+- `LOCAL_AI_FIX_README.md`：本地AI修复流程说明
 - `错题管理系统_需求确认书_v1.3_完整版.md`：完整需求文档（产品+工程自动化）。
 - `design/` 目录：系统架构、数据库设计、API设计、部署架构、工程自动化设计文档。
 - `implementation_plan.md`：实现计划，包含技术选型和PR拆分。
