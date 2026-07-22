@@ -1,3 +1,18 @@
+/**
+ * 认证控制器
+ * 
+ * 处理用户认证相关功能，包括：
+ * - 用户注册
+ * - 用户登录
+ * - 令牌刷新
+ * - 用户登出
+ * - 学生-家长绑定
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import { Request, Response, NextFunction } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
@@ -6,16 +21,39 @@ import { User, UserRole } from '../models/User'
 import { Student } from '../models/Student'
 import { Parent } from '../models/Parent'
 
+/**
+ * 认证控制器类
+ * 
+ * 提供用户认证相关的API接口
+ */
 export class AuthController {
   private userRepository = AppDataSource.getRepository(User)
   private studentRepository = AppDataSource.getRepository(Student)
   private parentRepository = AppDataSource.getRepository(Parent)
 
+  /**
+   * 用户注册
+   * 
+   * @param {Request} req - 请求对象，包含用户名、密码、角色等信息
+   * @param {Response} res - 响应对象
+   * @param {NextFunction} next - 下一个中间件
+   * @returns {Promise<void>}
+   * 
+   * @example
+   * // 注册学生
+   * POST /api/auth/register
+   * {
+   *   "username": "student1",
+   *   "password": "password123",
+   *   "role": "student",
+   *   "name": "张三"
+   * }
+   */
   register = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { username, password, role, name, grade, school, phone, email } = req.body
 
-      // Check if user exists
+      // 检查用户是否已存在
       const existingUser = await this.userRepository.findOne({
         where: { username },
       })
@@ -27,11 +65,11 @@ export class AuthController {
         })
       }
 
-      // Hash password
+      // 密码加密
       const salt = await bcrypt.genSalt(10)
       const hashedPassword = await bcrypt.hash(password, salt)
 
-      // Create user
+      // 创建用户
       const user = this.userRepository.create({
         username,
         password: hashedPassword,
@@ -40,7 +78,7 @@ export class AuthController {
 
       await this.userRepository.save(user)
 
-      // Create student or parent based on role
+      // 根据角色创建学生或家长档案
       if (user.role === UserRole.STUDENT) {
         const student = this.studentRepository.create({
           name: name || username,
@@ -63,7 +101,7 @@ export class AuthController {
         await this.userRepository.save(user)
       }
 
-      // Generate token
+      // 生成JWT令牌
       const token = jwt.sign(
         { id: user.id, role: user.role },
         process.env.JWT_SECRET || 'default-secret',
@@ -86,6 +124,22 @@ export class AuthController {
     }
   }
 
+  /**
+   * 用户登录
+   * 
+   * @param {Request} req - 请求对象，包含用户名和密码
+   * @param {Response} res - 响应对象
+   * @param {NextFunction} next - 下一个中间件
+   * @returns {Promise<void>}
+   * 
+   * @example
+   * // 登录
+   * POST /api/auth/login
+   * {
+   *   "username": "student1",
+   *   "password": "password123"
+   * }
+   */
   login = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { username, password } = req.body

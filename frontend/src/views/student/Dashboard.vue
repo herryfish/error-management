@@ -1,3 +1,16 @@
+<!--
+  学生端仪表盘组件
+  
+  功能：
+  - 显示今日任务数量
+  - 显示掌握进度百分比
+  - 显示薄弱知识点数量
+  - 快速导航到各功能页面
+  
+  @author 开发团队
+  @date 2026-07-22
+  @version 1.0.0
+-->
 <template>
   <div class="student-dashboard">
     <van-nav-bar

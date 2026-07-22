@@ -1,33 +1,80 @@
+/**
+ * LLM服务
+ * 
+ * 提供LLM调用封装，支持多提供商配置和降级策略
+ * 
+ * 功能特性：
+ * - 多提供商支持（OpenAI、Anthropic等）
+ * - 降级策略（主模型失败时自动切换降级模型）
+ * - 用量监控（记录每次调用的详细信息）
+ * - 错误处理（重试机制和超时处理）
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import OpenAI from 'openai'
 import { AppDataSource } from '../config/database'
 import { LLMUsage, LLMScene } from '../models/LLMUsage'
 
+/**
+ * LLM配置接口
+ */
 interface LLMConfig {
+  /** 提供商名称（如：openai、anthropic） */
   provider: string
+  /** 模型名称（如：gpt-4-vision-preview） */
   model: string
+  /** API密钥 */
   apiKey: string
+  /** API基础URL（可选） */
   apiBase?: string
 }
 
+/**
+ * 识别结果接口
+ */
 interface IdentificationResult {
+  /** 题目标题 */
   title: string
+  /** 题目内容 */
   content: string
+  /** 科目（math、physics、chemistry） */
   subject: string
+  /** 题目类型（choice、fill、answer） */
   type: string
+  /** 难度等级（1-5） */
   difficulty: number
+  /** 知识点标签 */
   knowledgePoints: string[]
+  /** 参考答案（可选） */
   answer?: string
+  /** 解析说明（可选） */
   explanation?: string
+  /** 识别置信度（0-1） */
   confidence: number
 }
 
+/**
+ * 批改结果接口
+ */
 interface GradingResult {
+  /** 是否正确 */
   isCorrect: boolean
+  /** 分数（0-100） */
   score: number
+  /** 批改反馈 */
   feedback: string
+  /** 批改置信度（0-1） */
   confidence: number
 }
 
+/**
+ * LLM服务类
+ * 
+ * 提供LLM调用封装，支持多提供商配置和降级策略
+ */
 export class LLMService {
   private llmUsageRepository = AppDataSource.getRepository(LLMUsage)
   private primaryClient: OpenAI | null = null
@@ -47,6 +94,11 @@ export class LLMService {
     this.initializeClients()
   }
 
+  /**
+   * 加载LLM配置
+   * 
+   * @returns {Object} LLM配置对象
+   */
   private loadConfig() {
     return {
       primary: {
