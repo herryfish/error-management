@@ -114,42 +114,41 @@ jobs:
           ISSUE_NUMBER="${{ steps.analyze.outputs.issue_number }}"
           ISSUE_TITLE="${{ steps.analyze.outputs.issue_title }}"
           
+          # 创建PR描述文件
+          cat > pr_body.md << 'PREOF'
+          ## Auto-Fix
+          
+          This PR auto-fixes Issue
+          
+          ### Changes
+          - Analyzed issue description
+          - Created fix documentation
+          
+          ### Testing
+          - Code check passed
+          - Branch created successfully
+          - Commit successful
+          
+          ### Review
+          - Manual review of fix plan
+          - Implement actual fix
+          - Test verification
+          PREOF
+          
           # 使用GitHub CLI创建PR
           gh pr create \
             --base master \
             --head $BRANCH_NAME \
-            --title "fix: 自动修复 Issue #$ISSUE_NUMBER" \
-            --body "## 🤖 自动修复
-
-本PR自动修复了 Issue #$ISSUE_NUMBER
-
-### Issue信息
-- **标题**: $ISSUE_TITLE
-- **Issue链接**: https://github.com/${{ github.repository }}/issues/$ISSUE_NUMBER
-
-### 修复内容
-- 根据Issue描述自动分析并创建修复记录
-- 创建了修复文档
-
-### 测试
-- [x] 代码检查通过
-- [x] 分支创建成功
-- [x] 提交成功
-
-### 审核
-- [ ] 人工审核修复方案
-- [ ] 实施具体修复
-- [ ] 测试验证
-
-Closes #$ISSUE_NUMBER" \
+            --title "fix: Auto-fix Issue #$ISSUE_NUMBER" \
+            --body-file pr_body.md \
             --label "auto-fix,bug"
         
         # 获取PR信息
-        PR_NUMBER=$(gh pr list --head $BRANCH_NAME --json number --jq '.[0].number')
-        PR_URL=$(gh pr list --head $BRANCH_NAME --json url --jq '.[0].url')
+        PR_NUMBER=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
+        PR_URL=$(gh pr list --head "$BRANCH_NAME" --json url --jq '.[0].url')
         
-        echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-        echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+        echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+        echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
             
       - name: Update issue with PR link
         uses: actions/github-script@v7
@@ -161,7 +160,7 @@ Closes #$ISSUE_NUMBER" \
             var prUrl = '${{ steps.create-pr.outputs.pr_url }}';
             var timestamp = new Date().toISOString();
             
-            var body = '## ✅ 自动修复PR已创建\n\n';
+            var body = '## [OK] 自动修复PR已创建\n\n';
             body += '**创建时间**: ' + timestamp + '\n';
             body += '**修复PR**: #' + prNumber + '\n';
             body += '**PR链接**: ' + prUrl + '\n\n';

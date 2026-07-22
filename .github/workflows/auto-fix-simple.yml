@@ -27,7 +27,7 @@ jobs:
           script: |
             var issueNumber = context.payload.inputs.issue_number;
             var timestamp = new Date().toISOString();
-            var body = '## 🤖 自动修复流程已触发\n\n';
+            var body = '## [Auto-Fix] 自动修复流程已触发\n\n';
             body += '**触发时间**: ' + timestamp + '\n';
             body += '**Issue编号**: #' + issueNumber + '\n\n';
             body += '这是一个简化版的自动修复测试工作流。';

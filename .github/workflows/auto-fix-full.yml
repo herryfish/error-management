@@ -68,23 +68,21 @@ jobs:
           # 这里可以集成AI工具来自动修复
           # 目前创建一个简单的修复文件
           
-          cat > FIX_ISSUE_$ISSUE_NUMBER.md << EOF
-# Issue #$ISSUE_NUMBER 修复记录
-
-## Issue信息
-- **标题**: $ISSUE_TITLE
-- **修复时间**: $(date)
-- **修复者**: GitHub Actions
-
-## 修复说明
-此Issue已被自动识别并记录。
-详细修复方案需要根据具体问题进行调整。
-
-## 下一步
-- [ ] 审核修复方案
-- [ ] 实施具体修复
-- [ ] 测试验证
-EOF
+          echo "# Issue #$ISSUE_NUMBER 修复记录" > FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "## Issue信息" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "- **标题**: $ISSUE_TITLE" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "- **修复时间**: $(date)" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "- **修复者**: GitHub Actions" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "## 修复说明" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "此Issue已被自动识别并记录。" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "详细修复方案需要根据具体问题进行调整。" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "## 下一步" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "- [ ] 审核修复方案" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "- [ ] 实施具体修复" >> FIX_ISSUE_$ISSUE_NUMBER.md
+          echo "- [ ] 测试验证" >> FIX_ISSUE_$ISSUE_NUMBER.md
           
           echo "修复文件已创建"
       
@@ -147,7 +145,7 @@ EOF
             var prUrl = '${{ steps.pr.outputs.pull-request-url }}';
             var timestamp = new Date().toISOString();
             
-            var body = '## ✅ 自动修复PR已创建\n\n';
+            var body = '## [OK] 自动修复PR已创建\n\n';
             body += '**创建时间**: ' + timestamp + '\n';
             body += '**修复PR**: #' + prNumber + '\n';
             body += '**PR链接**: ' + prUrl + '\n\n';

@@ -173,7 +173,7 @@ jobs:
             var version = '${{ steps.bump.outputs.version }}';
             var repoOwner = context.repo.owner;
             var repoName = context.repo.repo;
-            var body = '## 🎉 Release v' + version + ' 已发布！\n\n';
+            var body = '## [Success] Release v' + version + ' 已发布！\n\n';
             body += '### 发布内容\n';
             body += '- 版本号: v' + version + '\n';
             body += '- 变更日志: 已生成\n';
@@ -182,7 +182,7 @@ jobs:
             body += '### 访问链接\n';
             body += '- Release: https://github.com/' + repoOwner + '/' + repoName + '/releases/tag/v' + version + '\n';
             body += '- Docker: `docker pull ghcr.io/' + repoOwner + '/' + repoName + ':v' + version + '`\n\n';
-            body += '感谢您的贡献！🎉';
+            body += '感谢您的贡献！[Success]';
             
             await github.rest.issues.createComment({
               owner: repoOwner,
