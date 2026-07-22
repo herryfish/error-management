@@ -1,13 +1,33 @@
 <template>
   <div class="parent-questions-page">
-    <van-nav-bar title="孩子错题" left-arrow @click-left="$router.back()" />
+    <van-nav-bar
+      title="孩子错题"
+      left-arrow
+      @click-left="$router.back()"
+    />
     
-    <van-tabs v-model:active="activeTab" sticky>
+    <van-tabs
+      v-model:active="activeTab"
+      sticky
+    >
       <van-tab title="全部">
-        <van-list v-model:loading="loading" :finished="finished" @load="loadQuestions">
-          <van-cell v-for="question in questions" :key="question.id" :title="question.title" :label="question.subject" is-link @click="viewQuestion(question.id)">
+        <van-list
+          v-model:loading="loading"
+          :finished="finished"
+          @load="loadQuestions"
+        >
+          <van-cell
+            v-for="question in questions"
+            :key="question.id"
+            :title="question.title"
+            :label="question.subject"
+            is-link
+            @click="viewQuestion(question.id)"
+          >
             <template #right-icon>
-              <van-tag :type="getSubjectType(question.subject)">{{ getSubjectText(question.subject) }}</van-tag>
+              <van-tag :type="getSubjectType(question.subject)">
+                {{ getSubjectText(question.subject) }}
+              </van-tag>
             </template>
           </van-cell>
         </van-list>

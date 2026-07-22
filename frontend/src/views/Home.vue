@@ -3,7 +3,11 @@
     <h1>错题管理系统</h1>
     <p>欢迎使用错题管理系统</p>
     <div class="buttons">
-      <van-button type="primary" block @click="$router.push('/login')">
+      <van-button
+        type="primary"
+        block
+        @click="$router.push('/login')"
+      >
         登录
       </van-button>
     </div>

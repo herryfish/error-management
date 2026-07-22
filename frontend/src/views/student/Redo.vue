@@ -1,27 +1,59 @@
 <template>
   <div class="redo-page">
-    <van-nav-bar title="重做题目" left-arrow @click-left="$router.back()" />
+    <van-nav-bar
+      title="重做题目"
+      left-arrow
+      @click-left="$router.back()"
+    />
     
-    <div v-if="question" class="content">
+    <div
+      v-if="question"
+      class="content"
+    >
       <van-cell-group inset>
-        <van-cell :title="question.title" :label="`${getSubjectText(question.subject)} · ${getTypeText(question.type)}`" />
+        <van-cell
+          :title="question.title"
+          :label="`${getSubjectText(question.subject)} · ${getTypeText(question.type)}`"
+        />
       </van-cell-group>
       
-      <van-cell-group inset style="margin-top: 16px">
+      <van-cell-group
+        inset
+        style="margin-top: 16px"
+      >
         <van-cell title="题目内容">
-          <div class="question-content">{{ question.content }}</div>
+          <div class="question-content">
+            {{ question.content }}
+          </div>
         </van-cell>
       </van-cell-group>
       
-      <van-cell-group inset style="margin-top: 16px">
-        <van-field v-model="answer" type="textarea" rows="4" autosize placeholder="请输入你的答案" />
+      <van-cell-group
+        inset
+        style="margin-top: 16px"
+      >
+        <van-field
+          v-model="answer"
+          type="textarea"
+          rows="4"
+          autosize
+          placeholder="请输入你的答案"
+        />
       </van-cell-group>
       
       <div class="upload-section">
-        <van-uploader v-model="fileList" :max-count="1" :after-read="afterRead" accept="image/*">
+        <van-uploader
+          v-model="fileList"
+          :max-count="1"
+          :after-read="afterRead"
+          accept="image/*"
+        >
           <template #default>
             <div class="upload-content">
-              <van-icon name="photograph" size="24" />
+              <van-icon
+                name="photograph"
+                size="24"
+              />
               <div>拍照上传</div>
             </div>
           </template>
@@ -29,12 +61,28 @@
       </div>
       
       <div class="actions">
-        <van-button type="primary" block @click="submitRedo" :loading="submitting">提交</van-button>
-        <van-button type="default" block @click="showHint">提示</van-button>
+        <van-button
+          type="primary"
+          block
+          :loading="submitting"
+          @click="submitRedo"
+        >
+          提交
+        </van-button>
+        <van-button
+          type="default"
+          block
+          @click="showHint"
+        >
+          提示
+        </van-button>
       </div>
     </div>
     
-    <van-empty v-else description="加载中..." />
+    <van-empty
+      v-else
+      description="加载中..."
+    />
   </div>
 </template>
 

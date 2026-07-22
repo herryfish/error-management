@@ -1,6 +1,10 @@
 <template>
   <div class="register-page">
-    <van-nav-bar title="注册" left-arrow @click-left="$router.back()" />
+    <van-nav-bar
+      title="注册"
+      left-arrow
+      @click-left="$router.back()"
+    />
     
     <van-form @submit="onSubmit">
       <van-cell-group inset>
@@ -26,21 +30,61 @@
           placeholder="姓名"
           :rules="[{ required: true, message: '请填写姓名' }]"
         />
-        <van-field name="role" label="角色">
+        <van-field
+          name="role"
+          label="角色"
+        >
           <template #input>
-            <van-radio-group v-model="form.role" direction="horizontal">
-              <van-radio name="student">学生</van-radio>
-              <van-radio name="parent">家长</van-radio>
+            <van-radio-group
+              v-model="form.role"
+              direction="horizontal"
+            >
+              <van-radio name="student">
+                学生
+              </van-radio>
+              <van-radio name="parent">
+                家长
+              </van-radio>
             </van-radio-group>
           </template>
         </van-field>
-        <van-field v-if="form.role === 'student'" v-model="form.grade" name="grade" label="年级" placeholder="年级" />
-        <van-field v-if="form.role === 'student'" v-model="form.school" name="school" label="学校" placeholder="学校" />
-        <van-field v-if="form.role === 'parent'" v-model="form.phone" name="phone" label="手机号" placeholder="手机号" />
-        <van-field v-if="form.role === 'parent'" v-model="form.email" name="email" label="邮箱" placeholder="邮箱" />
+        <van-field
+          v-if="form.role === 'student'"
+          v-model="form.grade"
+          name="grade"
+          label="年级"
+          placeholder="年级"
+        />
+        <van-field
+          v-if="form.role === 'student'"
+          v-model="form.school"
+          name="school"
+          label="学校"
+          placeholder="学校"
+        />
+        <van-field
+          v-if="form.role === 'parent'"
+          v-model="form.phone"
+          name="phone"
+          label="手机号"
+          placeholder="手机号"
+        />
+        <van-field
+          v-if="form.role === 'parent'"
+          v-model="form.email"
+          name="email"
+          label="邮箱"
+          placeholder="邮箱"
+        />
       </van-cell-group>
       <div style="margin: 16px">
-        <van-button round block type="primary" native-type="submit" :loading="loading">
+        <van-button
+          round
+          block
+          type="primary"
+          native-type="submit"
+          :loading="loading"
+        >
           注册
         </van-button>
       </div>

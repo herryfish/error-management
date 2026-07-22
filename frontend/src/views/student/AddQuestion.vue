@@ -1,65 +1,184 @@
 <template>
   <div class="add-question-page">
-    <van-nav-bar title="录入错题" left-arrow @click-left="$router.back()" />
+    <van-nav-bar
+      title="录入错题"
+      left-arrow
+      @click-left="$router.back()"
+    />
     
     <van-tabs v-model:active="activeTab">
       <van-tab title="手动录入">
         <van-form @submit="onSubmit">
           <van-cell-group inset>
-            <van-field v-model="form.title" name="title" label="标题" placeholder="题目标题" :rules="[{ required: true, message: '请填写标题' }]" />
-            <van-field v-model="form.content" type="textarea" rows="3" autosize name="content" label="题目内容" placeholder="请输入题目内容" :rules="[{ required: true, message: '请填写题目内容' }]" />
-            <van-field name="subject" label="科目" :rules="[{ required: true, message: '请选择科目' }]">
+            <van-field
+              v-model="form.title"
+              name="title"
+              label="标题"
+              placeholder="题目标题"
+              :rules="[{ required: true, message: '请填写标题' }]"
+            />
+            <van-field
+              v-model="form.content"
+              type="textarea"
+              rows="3"
+              autosize
+              name="content"
+              label="题目内容"
+              placeholder="请输入题目内容"
+              :rules="[{ required: true, message: '请填写题目内容' }]"
+            />
+            <van-field
+              name="subject"
+              label="科目"
+              :rules="[{ required: true, message: '请选择科目' }]"
+            >
               <template #input>
-                <van-radio-group v-model="form.subject" direction="horizontal">
-                  <van-radio name="math">数学</van-radio>
-                  <van-radio name="physics">物理</van-radio>
-                  <van-radio name="chemistry">化学</van-radio>
+                <van-radio-group
+                  v-model="form.subject"
+                  direction="horizontal"
+                >
+                  <van-radio name="math">
+                    数学
+                  </van-radio>
+                  <van-radio name="physics">
+                    物理
+                  </van-radio>
+                  <van-radio name="chemistry">
+                    化学
+                  </van-radio>
                 </van-radio-group>
               </template>
             </van-field>
-            <van-field name="type" label="题型" :rules="[{ required: true, message: '请选择题型' }]">
+            <van-field
+              name="type"
+              label="题型"
+              :rules="[{ required: true, message: '请选择题型' }]"
+            >
               <template #input>
-                <van-radio-group v-model="form.type" direction="horizontal">
-                  <van-radio name="choice">选择题</van-radio>
-                  <van-radio name="fill">填空题</van-radio>
-                  <van-radio name="answer">解答题</van-radio>
+                <van-radio-group
+                  v-model="form.type"
+                  direction="horizontal"
+                >
+                  <van-radio name="choice">
+                    选择题
+                  </van-radio>
+                  <van-radio name="fill">
+                    填空题
+                  </van-radio>
+                  <van-radio name="answer">
+                    解答题
+                  </van-radio>
                 </van-radio-group>
               </template>
             </van-field>
-            <van-field v-model="form.difficulty" type="digit" name="difficulty" label="难度" placeholder="1-5" />
-            <van-field v-model="knowledgePointsStr" name="knowledgePoints" label="知识点" placeholder="用逗号分隔" />
-            <van-field v-model="form.answer" type="textarea" rows="2" name="answer" label="参考答案" placeholder="参考答案（可选）" />
-            <van-field v-model="form.explanation" type="textarea" rows="2" name="explanation" label="解析" placeholder="解析（可选）" />
+            <van-field
+              v-model="form.difficulty"
+              type="digit"
+              name="difficulty"
+              label="难度"
+              placeholder="1-5"
+            />
+            <van-field
+              v-model="knowledgePointsStr"
+              name="knowledgePoints"
+              label="知识点"
+              placeholder="用逗号分隔"
+            />
+            <van-field
+              v-model="form.answer"
+              type="textarea"
+              rows="2"
+              name="answer"
+              label="参考答案"
+              placeholder="参考答案（可选）"
+            />
+            <van-field
+              v-model="form.explanation"
+              type="textarea"
+              rows="2"
+              name="explanation"
+              label="解析"
+              placeholder="解析（可选）"
+            />
           </van-cell-group>
           <div style="margin: 16px">
-            <van-button round block type="primary" native-type="submit" :loading="submitting">提交</van-button>
+            <van-button
+              round
+              block
+              type="primary"
+              native-type="submit"
+              :loading="submitting"
+            >
+              提交
+            </van-button>
           </div>
         </van-form>
       </van-tab>
       
       <van-tab title="拍照识别">
         <div class="photo-section">
-          <van-uploader v-model="fileList" :max-count="1" :after-read="afterRead" accept="image/*" :deletable="true">
+          <van-uploader
+            v-model="fileList"
+            :max-count="1"
+            :after-read="afterRead"
+            accept="image/*"
+            :deletable="true"
+          >
             <template #default>
               <div class="upload-content">
-                <van-icon name="photograph" size="48" />
+                <van-icon
+                  name="photograph"
+                  size="48"
+                />
                 <div>点击拍照或上传图片</div>
               </div>
             </template>
           </van-uploader>
           
-          <van-button v-if="fileList.length > 0" type="primary" block @click="identifyQuestion" :loading="identifying">
+          <van-button
+            v-if="fileList.length > 0"
+            type="primary"
+            block
+            :loading="identifying"
+            @click="identifyQuestion"
+          >
             AI识别
           </van-button>
           
-          <div v-if="identifiedQuestion" class="identified-result">
+          <div
+            v-if="identifiedQuestion"
+            class="identified-result"
+          >
             <van-cell-group inset>
-              <van-cell title="识别结果" :value="`${((identifiedQuestion.confidence || 0) * 100).toFixed(0)}%`" />
-              <van-field v-model="identifiedQuestion.title" label="标题" />
-              <van-field v-model="identifiedQuestion.content" type="textarea" rows="2" label="内容" />
-              <van-field v-model="identifiedQuestion.answer" type="textarea" rows="2" label="答案" />
+              <van-cell
+                title="识别结果"
+                :value="`${((identifiedQuestion.confidence || 0) * 100).toFixed(0)}%`"
+              />
+              <van-field
+                v-model="identifiedQuestion.title"
+                label="标题"
+              />
+              <van-field
+                v-model="identifiedQuestion.content"
+                type="textarea"
+                rows="2"
+                label="内容"
+              />
+              <van-field
+                v-model="identifiedQuestion.answer"
+                type="textarea"
+                rows="2"
+                label="答案"
+              />
             </van-cell-group>
-            <van-button type="primary" block @click="saveIdentifiedQuestion" :loading="submitting">保存</van-button>
+            <van-button
+              type="primary"
+              block
+              :loading="submitting"
+              @click="saveIdentifiedQuestion"
+            >
+              保存
+            </van-button>
           </div>
         </div>
       </van-tab>

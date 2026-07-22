@@ -1,19 +1,48 @@
 <template>
   <div class="settings-page">
-    <van-nav-bar title="设置" left-arrow @click-left="$router.back()" />
+    <van-nav-bar
+      title="设置"
+      left-arrow
+      @click-left="$router.back()"
+    />
     
     <van-cell-group inset>
-      <van-cell title="账号信息" is-link @click="$router.push('/account')" />
-      <van-cell title="通知设置" is-link @click="$router.push('/notifications')" />
+      <van-cell
+        title="账号信息"
+        is-link
+        @click="$router.push('/account')"
+      />
+      <van-cell
+        title="通知设置"
+        is-link
+        @click="$router.push('/notifications')"
+      />
     </van-cell-group>
     
-    <van-cell-group inset style="margin-top: 16px">
-      <van-cell title="清除缓存" is-link @click="clearCache" />
-      <van-cell title="关于我们" is-link @click="$router.push('/about')" />
+    <van-cell-group
+      inset
+      style="margin-top: 16px"
+    >
+      <van-cell
+        title="清除缓存"
+        is-link
+        @click="clearCache"
+      />
+      <van-cell
+        title="关于我们"
+        is-link
+        @click="$router.push('/about')"
+      />
     </van-cell-group>
     
     <div style="margin: 16px">
-      <van-button type="danger" block @click="logout">退出登录</van-button>
+      <van-button
+        type="danger"
+        block
+        @click="logout"
+      >
+        退出登录
+      </van-button>
     </div>
   </div>
 </template>

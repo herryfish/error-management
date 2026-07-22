@@ -1,39 +1,88 @@
 <template>
   <div class="question-detail">
-    <van-nav-bar title="题目详情" left-arrow @click-left="$router.back()" />
+    <van-nav-bar
+      title="题目详情"
+      left-arrow
+      @click-left="$router.back()"
+    />
     
-    <div v-if="question" class="content">
+    <div
+      v-if="question"
+      class="content"
+    >
       <van-cell-group inset>
-        <van-cell :title="question.title" :label="`${getSubjectText(question.subject)} · ${getTypeText(question.type)} · 难度${question.difficulty}`" />
+        <van-cell
+          :title="question.title"
+          :label="`${getSubjectText(question.subject)} · ${getTypeText(question.type)} · 难度${question.difficulty}`"
+        />
       </van-cell-group>
       
-      <van-cell-group inset style="margin-top: 16px">
+      <van-cell-group
+        inset
+        style="margin-top: 16px"
+      >
         <van-cell title="题目内容">
-          <div class="question-content">{{ question.content }}</div>
+          <div class="question-content">
+            {{ question.content }}
+          </div>
         </van-cell>
-        <van-cell v-if="question.answer" title="参考答案">
-          <div class="answer-content">{{ question.answer }}</div>
+        <van-cell
+          v-if="question.answer"
+          title="参考答案"
+        >
+          <div class="answer-content">
+            {{ question.answer }}
+          </div>
         </van-cell>
-        <van-cell v-if="question.explanation" title="解析">
-          <div class="explanation-content">{{ question.explanation }}</div>
+        <van-cell
+          v-if="question.explanation"
+          title="解析"
+        >
+          <div class="explanation-content">
+            {{ question.explanation }}
+          </div>
         </van-cell>
       </van-cell-group>
       
-      <van-cell-group inset style="margin-top: 16px" v-if="question.knowledgePoints?.length">
+      <van-cell-group
+        v-if="question.knowledgePoints?.length"
+        inset
+        style="margin-top: 16px"
+      >
         <van-cell title="知识点">
-          <van-tag v-for="point in question.knowledgePoints" :key="point" type="primary" style="margin-right: 8px; margin-bottom: 8px;">
+          <van-tag
+            v-for="point in question.knowledgePoints"
+            :key="point"
+            type="primary"
+            style="margin-right: 8px; margin-bottom: 8px;"
+          >
             {{ point }}
           </van-tag>
         </van-cell>
       </van-cell-group>
       
       <div class="actions">
-        <van-button type="primary" block @click="startRedo">开始重做</van-button>
-        <van-button type="default" block @click="viewSimilar">查看相似题</van-button>
+        <van-button
+          type="primary"
+          block
+          @click="startRedo"
+        >
+          开始重做
+        </van-button>
+        <van-button
+          type="default"
+          block
+          @click="viewSimilar"
+        >
+          查看相似题
+        </van-button>
       </div>
     </div>
     
-    <van-empty v-else description="加载中..." />
+    <van-empty
+      v-else
+      description="加载中..."
+    />
   </div>
 </template>
 

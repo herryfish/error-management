@@ -1,17 +1,40 @@
 <template>
   <div class="questions-page">
-    <van-nav-bar title="错题本" left-arrow @click-left="$router.back()">
+    <van-nav-bar
+      title="错题本"
+      left-arrow
+      @click-left="$router.back()"
+    >
       <template #right>
-        <van-icon name="search" @click="showSearch = true" />
+        <van-icon
+          name="search"
+          @click="showSearch = true"
+        />
       </template>
     </van-nav-bar>
     
-    <van-tabs v-model:active="activeTab" sticky>
+    <van-tabs
+      v-model:active="activeTab"
+      sticky
+    >
       <van-tab title="全部">
-        <van-list v-model:loading="loading" :finished="finished" @load="loadQuestions">
-          <van-cell v-for="question in questions" :key="question.id" :title="question.title" :label="question.subject" is-link @click="viewQuestion(question.id)">
+        <van-list
+          v-model:loading="loading"
+          :finished="finished"
+          @load="loadQuestions"
+        >
+          <van-cell
+            v-for="question in questions"
+            :key="question.id"
+            :title="question.title"
+            :label="question.subject"
+            is-link
+            @click="viewQuestion(question.id)"
+          >
             <template #right-icon>
-              <van-tag :type="getSubjectType(question.subject)">{{ getSubjectText(question.subject) }}</van-tag>
+              <van-tag :type="getSubjectType(question.subject)">
+                {{ getSubjectText(question.subject) }}
+              </van-tag>
             </template>
           </van-cell>
         </van-list>
@@ -24,21 +47,52 @@
       </van-tab>
     </van-tabs>
     
-    <van-button type="primary" block round class="add-button" @click="$router.push('/questions/add')">
+    <van-button
+      type="primary"
+      block
+      round
+      class="add-button"
+      @click="$router.push('/questions/add')"
+    >
       <van-icon name="plus" /> 录入新错题
     </van-button>
     
-    <van-popup v-model:show="showSearch" position="right" :style="{ width: '80%', height: '100%' }">
+    <van-popup
+      v-model:show="showSearch"
+      position="right"
+      :style="{ width: '80%', height: '100%' }"
+    >
       <div class="search-panel">
-        <van-nav-bar title="搜索" left-text="取消" @click-left="showSearch = false" />
-        <van-search v-model="searchKeyword" placeholder="搜索题目" show-action @search="onSearch">
+        <van-nav-bar
+          title="搜索"
+          left-text="取消"
+          @click-left="showSearch = false"
+        />
+        <van-search
+          v-model="searchKeyword"
+          placeholder="搜索题目"
+          show-action
+          @search="onSearch"
+        >
           <template #action>
-            <div @click="onSearch">搜索</div>
+            <div @click="onSearch">
+              搜索
+            </div>
           </template>
         </van-search>
         <van-cell-group>
-          <van-cell title="科目" is-link @click="showSubjectPicker = true" :value="searchSubject || '全部'" />
-          <van-cell title="难度" is-link @click="showDifficultyPicker = true" :value="searchDifficulty || '全部'" />
+          <van-cell
+            title="科目"
+            is-link
+            :value="searchSubject || '全部'"
+            @click="showSubjectPicker = true"
+          />
+          <van-cell
+            title="难度"
+            is-link
+            :value="searchDifficulty || '全部'"
+            @click="showDifficultyPicker = true"
+          />
         </van-cell-group>
       </div>
     </van-popup>

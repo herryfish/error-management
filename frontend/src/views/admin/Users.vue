@@ -1,18 +1,39 @@
 <template>
   <div class="admin-users-page">
-    <van-nav-bar title="用户管理" left-arrow @click-left="$router.back()" />
+    <van-nav-bar
+      title="用户管理"
+      left-arrow
+      @click-left="$router.back()"
+    />
     
-    <van-search v-model="searchKeyword" placeholder="搜索用户" />
+    <van-search
+      v-model="searchKeyword"
+      placeholder="搜索用户"
+    />
     
-    <van-list v-model:loading="loading" :finished="finished" @load="loadUsers">
-      <van-cell v-for="user in users" :key="user.id" :title="user.username" :label="getRoleText(user.role)">
+    <van-list
+      v-model:loading="loading"
+      :finished="finished"
+      @load="loadUsers"
+    >
+      <van-cell
+        v-for="user in users"
+        :key="user.id"
+        :title="user.username"
+        :label="getRoleText(user.role)"
+      >
         <template #right-icon>
-          <van-tag :type="getRoleType(user.role)">{{ getRoleText(user.role) }}</van-tag>
+          <van-tag :type="getRoleType(user.role)">
+            {{ getRoleText(user.role) }}
+          </van-tag>
         </template>
       </van-cell>
     </van-list>
     
-    <van-empty v-if="!loading && users.length === 0" description="暂无用户" />
+    <van-empty
+      v-if="!loading && users.length === 0"
+      description="暂无用户"
+    />
   </div>
 </template>
 

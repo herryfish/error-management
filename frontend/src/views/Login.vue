@@ -20,7 +20,12 @@
         />
       </van-cell-group>
       <div style="margin: 16px">
-        <van-button round block type="primary" native-type="submit">
+        <van-button
+          round
+          block
+          type="primary"
+          native-type="submit"
+        >
           登录
         </van-button>
       </div>

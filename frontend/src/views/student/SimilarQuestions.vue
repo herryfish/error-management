@@ -1,19 +1,51 @@
 <template>
   <div class="similar-questions-page">
-    <van-nav-bar title="相似题" left-arrow @click-left="$router.back()" />
+    <van-nav-bar
+      title="相似题"
+      left-arrow
+      @click-left="$router.back()"
+    />
     
-    <van-list v-model:loading="loading" :finished="finished" @load="loadSimilarQuestions">
-      <van-cell v-for="item in similarQuestions" :key="item.id" :title="item.content" :label="`相似度: ${(item.similarity * 100).toFixed(0)}%`">
+    <van-list
+      v-model:loading="loading"
+      :finished="finished"
+      @load="loadSimilarQuestions"
+    >
+      <van-cell
+        v-for="item in similarQuestions"
+        :key="item.id"
+        :title="item.content"
+        :label="`相似度: ${(item.similarity * 100).toFixed(0)}%`"
+      >
         <template #right-icon>
-          <van-button size="small" type="primary" @click="startRedo(item.questionId)">开始练习</van-button>
+          <van-button
+            size="small"
+            type="primary"
+            @click="startRedo(item.questionId)"
+          >
+            开始练习
+          </van-button>
         </template>
       </van-cell>
     </van-list>
     
-    <van-empty v-if="!loading && similarQuestions.length === 0" description="暂无相似题" />
+    <van-empty
+      v-if="!loading && similarQuestions.length === 0"
+      description="暂无相似题"
+    />
     
-    <div class="actions" v-if="similarQuestions.length > 0">
-      <van-button type="default" block @click="regenerate" :loading="regenerating">重新生成</van-button>
+    <div
+      v-if="similarQuestions.length > 0"
+      class="actions"
+    >
+      <van-button
+        type="default"
+        block
+        :loading="regenerating"
+        @click="regenerate"
+      >
+        重新生成
+      </van-button>
     </div>
   </div>
 </template>
