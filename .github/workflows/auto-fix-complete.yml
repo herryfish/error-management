@@ -109,40 +109,47 @@ jobs:
       
       - name: Create Pull Request
         id: create-pr
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "fix: 自动修复 Issue #${{ steps.analyze.outputs.issue_number }}"
-          branch: ${{ steps.analyze.outputs.branch }}
-          base: master
-          title: "fix: 自动修复 Issue #${{ steps.analyze.outputs.issue_number }}"
-          body: |
-            ## 🤖 自动修复
-            
-            本PR自动修复了 Issue #${{ steps.analyze.outputs.issue_number }}
-            
-            ### Issue信息
-            - **标题**: ${{ steps.analyze.outputs.issue_title }}
-            - **Issue链接**: https://github.com/${{ github.repository }}/issues/${{ steps.analyze.outputs.issue_number }}
-            
-            ### 修复内容
-            - 根据Issue描述自动分析并创建修复记录
-            - 创建了修复文档
-            
-            ### 测试
-            - [x] 代码检查通过
-            - [x] 分支创建成功
-            - [x] 提交成功
-            
-            ### 审核
-            - [ ] 人工审核修复方案
-            - [ ] 实施具体修复
-            - [ ] 测试验证
-            
-            Closes #${{ steps.analyze.outputs.issue_number }}
-          labels: |
-            auto-fix
-            bug
+        run: |
+          BRANCH_NAME="${{ steps.analyze.outputs.branch }}"
+          ISSUE_NUMBER="${{ steps.analyze.outputs.issue_number }}"
+          ISSUE_TITLE="${{ steps.analyze.outputs.issue_title }}"
+          
+          # 使用GitHub CLI创建PR
+          gh pr create \
+            --base master \
+            --head $BRANCH_NAME \
+            --title "fix: 自动修复 Issue #$ISSUE_NUMBER" \
+            --body "## 🤖 自动修复
+
+本PR自动修复了 Issue #$ISSUE_NUMBER
+
+### Issue信息
+- **标题**: $ISSUE_TITLE
+- **Issue链接**: https://github.com/${{ github.repository }}/issues/$ISSUE_NUMBER
+
+### 修复内容
+- 根据Issue描述自动分析并创建修复记录
+- 创建了修复文档
+
+### 测试
+- [x] 代码检查通过
+- [x] 分支创建成功
+- [x] 提交成功
+
+### 审核
+- [ ] 人工审核修复方案
+- [ ] 实施具体修复
+- [ ] 测试验证
+
+Closes #$ISSUE_NUMBER" \
+            --label "auto-fix,bug"
+        
+        # 获取PR信息
+        PR_NUMBER=$(gh pr list --head $BRANCH_NAME --json number --jq '.[0].number')
+        PR_URL=$(gh pr list --head $BRANCH_NAME --json url --jq '.[0].url')
+        
+        echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+        echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
             
       - name: Update issue with PR link
         uses: actions/github-script@v7
@@ -150,22 +157,9 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             var issueNumber = context.payload.inputs.issue_number || context.payload.issue.number;
+            var prNumber = '${{ steps.create-pr.outputs.pr_number }}';
+            var prUrl = '${{ steps.create-pr.outputs.pr_url }}';
             var timestamp = new Date().toISOString();
-            
-            // 获取PR信息
-            var prs = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: context.repo.owner + ':' + '${{ steps.analyze.outputs.branch }}',
-              state: 'open'
-            });
-            
-            var prNumber = 'unknown';
-            var prUrl = 'unknown';
-            if (prs.data.length > 0) {
-              prNumber = prs.data[0].number;
-              prUrl = prs.data[0].html_url;
-            }
             
             var body = '## ✅ 自动修复PR已创建\n\n';
             body += '**创建时间**: ' + timestamp + '\n';
