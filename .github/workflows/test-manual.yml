@@ -26,17 +26,16 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issueNumber = context.payload.inputs.issue_number;
-            const timestamp = new Date().toISOString();
+            var issueNumber = context.payload.inputs.issue_number;
+            var timestamp = new Date().toISOString();
+            var body = '## 手动触发测试成功！\n\n';
+            body += '**触发时间**: ' + timestamp + '\n';
+            body += '**工作流**: Test Manual Trigger\n\n';
+            body += '这是一个手动触发的测试工作流，用于验证工作流配置是否正确。';
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issueNumber,
-              body: `## 手动触发测试成功！
-
-**触发时间**: ${timestamp}
-**工作流**: Test Manual Trigger
-
-这是一个手动触发的测试工作流，用于验证工作流配置是否正确。`
+              body: body
             });
