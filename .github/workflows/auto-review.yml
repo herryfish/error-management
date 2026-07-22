@@ -1,0 +1,171 @@
+name: Auto Review PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  auto-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          npm ci --prefix backend
+          npm ci --prefix frontend
+      
+      - name: Run code analysis
+        id: analysis
+        run: |
+          echo "Running code analysis..."
+          
+          # 运行lint检查
+          cd backend && npm run lint 2>&1 | tee ../backend-lint.log || true
+          cd ../frontend && npm run lint 2>&1 | tee ../frontend-lint.log || true
+          
+          # 运行TypeScript检查
+          cd ../backend && npx tsc --noEmit 2>&1 | tee ../backend-typecheck.log || true
+          cd ../frontend && npx vue-tsc --noEmit 2>&1 | tee ../frontend-typecheck.log || true
+          
+          # 检查测试覆盖率
+          cd ../backend && npm test 2>&1 | tee ../backend-test.log || true
+          
+          # 生成分析报告
+          echo "## 代码分析报告" > analysis-report.md
+          echo "" >> analysis-report.md
+          echo "### Lint检查" >> analysis-report.md
+          echo "- Backend: $(grep -c "error" ../backend-lint.log 2>/dev/null || echo "0") 个错误" >> analysis-report.md
+          echo "- Frontend: $(grep -c "error" ../frontend-lint.log 2>/dev/null || echo "0") 个错误" >> analysis-report.md
+          echo "" >> analysis-report.md
+          echo "### TypeScript检查" >> analysis-report.md
+          echo "- Backend: $(grep -c "error" ../backend-typecheck.log 2>/dev/null || echo "0") 个错误" >> analysis-report.md
+          echo "- Frontend: $(grep -c "error" ../frontend-typecheck.log 2>/dev/null || echo "0") 个错误" >> analysis-report.md
+          echo "" >> analysis-report.md
+          echo "### 测试结果" >> analysis-report.md
+          echo "- Backend: $(grep -c "PASS" ../backend-test.log 2>/dev/null || echo "0") 个通过" >> analysis-report.md
+      
+      - name: Check for breaking changes
+        id: breaking
+        run: |
+          echo "Checking for breaking changes..."
+          
+          # 检查是否有破坏性变更
+          BREAKING_CHANGES=false
+          
+          # 检查package.json变更
+          if git diff --name-only HEAD~1 | grep -q "package.json"; then
+            echo "检测到package.json变更"
+            BREAKING_CHANGES=true
+          fi
+          
+          # 检查数据库迁移
+          if git diff --name-only HEAD~1 | grep -q "migrations"; then
+            echo "检测到数据库迁移"
+            BREAKING_CHANGES=true
+          fi
+          
+          echo "breaking_changes=$BREAKING_CHANGES" >> $GITHUB_OUTPUT
+      
+      - name: Generate review comment
+        id: review
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BODY="${{ github.event.pull_request.body }}"
+          
+          # 读取分析报告
+          ANALYSIS_REPORT=""
+          if [ -f analysis-report.md ]; then
+            ANALYSIS_REPORT=$(cat analysis-report.md)
+          fi
+          
+          # 生成审核评论
+          cat > review-comment.md << EOF
+          ## 自动代码审核
+          
+          ### PR信息
+          - **标题**: $PR_TITLE
+          - **描述**: $PR_BODY
+          
+          ### 代码分析
+          $ANALYSIS_REPORT
+          
+          ### 破坏性变更检查
+          - 破坏性变更: ${{ steps.breaking.outputs.breaking_changes }}
+          
+          ### 建议
+          - [ ] 检查代码质量
+          - [ ] 验证测试覆盖
+          - [ ] 确认文档更新
+          - [ ] 检查安全性
+          
+          ### 审核状态
+          - [x] 自动分析完成
+          - [ ] 人工审核
+          
+          ---
+          *此审核由自动审核工作流生成*
+          EOF
+      
+      - name: Add review comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const comment = fs.readFileSync('review-comment.md', 'utf8');
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: comment
+            });
+      
+      - name: Approve PR if checks pass
+        if: steps.breaking.outputs.breaking_changes == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // 检查是否所有检查都通过
+            const checks = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.payload.pull_request.head.sha
+            });
+            
+            const allPassed = checks.data.checks.every(check => check.conclusion === 'success');
+            
+            if (allPassed) {
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                event: 'APPROVE',
+                body: '## 自动审核通过\n\n所有自动检查已通过，可以合并。'
+              });
+            }
+      
+      - name: Request changes if issues found
+        if: steps.breaking.outputs.breaking_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              event: 'REQUEST_CHANGES',
+              body: '## 需要修改\n\n检测到破坏性变更，请审核并确认。'
+            });

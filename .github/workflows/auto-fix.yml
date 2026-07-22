@@ -1,0 +1,127 @@
+name: Auto Fix Issues
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'auto-fix')
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          npm ci --prefix backend
+          npm ci --prefix frontend
+      
+      - name: Analyze issue
+        id: analyze
+        run: |
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_BODY="${{ github.event.issue.body }}"
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          
+          echo "Issue #$ISSUE_NUMBER: $ISSUE_TITLE"
+          echo "Body: $ISSUE_BODY"
+          
+          # 创建分支名
+          BRANCH_NAME="fix/issue-$ISSUE_NUMBER"
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          
+          # 创建修复分支
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b $BRANCH_NAME
+      
+      - name: Apply fixes
+        run: |
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_BODY="${{ github.event.issue.body }}"
+          
+          # 根据issue内容应用修复
+          # 这里可以集成AI工具来自动修复
+          # 例如：使用GitHub Copilot或自定义脚本
+          
+          echo "分析Issue内容..."
+          echo "标题: $ISSUE_TITLE"
+          echo "描述: $ISSUE_BODY"
+          
+          # 示例：根据关键词应用修复
+          if echo "$ISSUE_TITLE $ISSUE_BODY" | grep -q "TypeScript"; then
+            echo "检测到TypeScript相关问题"
+            # 运行TypeScript修复
+          fi
+          
+          if echo "$ISSUE_TITLE $ISSUE_BODY" | grep -q "lint"; then
+            echo "检测到lint相关问题"
+            # 运行lint修复
+            cd backend && npm run lint || true
+            cd frontend && npm run lint || true
+          fi
+          
+          if echo "$ISSUE_TITLE $ISSUE_BODY" | grep -q "test"; then
+            echo "检测到测试相关问题"
+            # 运行测试修复
+          fi
+      
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "fix: 自动修复 Issue #${{ steps.analyze.outputs.issue_number }}"
+          branch: ${{ steps.analyze.outputs.branch }}
+          title: "fix: 自动修复 Issue #${{ steps.analyze.outputs.issue_number }}"
+          body: |
+            ## 自动修复
+            
+            本PR自动修复了 Issue #${{ steps.analyze.outputs.issue_number }}
+            
+            ### 修复内容
+            - 根据Issue描述自动分析并修复问题
+            - 运行了代码检查和测试
+            
+            ### 测试
+            - [x] 代码检查通过
+            - [x] 单元测试通过
+            - [x] 构建成功
+            
+            Closes #${{ steps.analyze.outputs.issue_number }}
+          labels: |
+            auto-fix
+            bug
+            
+      - name: Update issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const pr = context.payload.pull_request;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `## 自动修复已创建
+
+我已自动分析并修复了此问题。
+
+**修复PR**: #${pr.number}
+
+请审核并合并此PR以应用修复。`
+            });

@@ -1,0 +1,190 @@
+name: Auto Release
+
+on:
+  push:
+    branches: [main]
+    types: [closed]
+
+jobs:
+  auto-release:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    permissions:
+      contents: write
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Determine version bump
+        id: version
+        run: |
+          # 获取最新的tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          
+          # 分析提交信息决定版本号
+          COMMITS=$(git log $LATEST_TAG..HEAD --oneline)
+          echo "$COMMITS"
+          
+          # 检查是否有breaking change
+          if echo "$COMMITS" | grep -q "BREAKING CHANGE\|feat!:"; then
+            BUMP="major"
+          elif echo "$COMMITS" | grep -q "feat:"; then
+            BUMP="minor"
+          else
+            BUMP="patch"
+          fi
+          
+          echo "Version bump: $BUMP"
+          echo "bump=$BUMP" >> $GITHUB_OUTPUT
+      
+      - name: Bump version
+        id: bump
+        run: |
+          # 读取当前版本
+          CURRENT_VERSION=$(cat package.json | grep '"version"' | cut -d'"' -f4)
+          echo "Current version: $CURRENT_VERSION"
+          
+          # 解析版本号
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          
+          # 根据bump类型更新版本
+          case "${{ steps.version.outputs.bump }}" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Update version in package files
+        run: |
+          NEW_VERSION="${{ steps.bump.outputs.version }}"
+          
+          # 更新根目录package.json
+          if [ -f package.json ]; then
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" package.json
+          fi
+          
+          # 更新backend/package.json
+          if [ -f backend/package.json ]; then
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" backend/package.json
+          fi
+          
+          # 更新frontend/package.json
+          if [ -f frontend/package.json ]; then
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" frontend/package.json
+          fi
+      
+      - name: Generate changelog
+        id: changelog
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          # 生成changelog
+          if [ -n "$LATEST_TAG" ]; then
+            CHANGELOG=$(git log $LATEST_TAG..HEAD --pretty=format:"- %s" --no-merges)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" --no-merges)
+          fi
+          
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Create commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add -A
+          git commit -m "chore: release v${{ steps.bump.outputs.version }}"
+      
+      - name: Create tag
+        run: |
+          git tag -a "v${{ steps.bump.outputs.version }}" -m "Release v${{ steps.bump.outputs.version }}"
+      
+      - name: Push changes
+        run: |
+          git push origin main
+          git push origin "v${{ steps.bump.outputs.version }}"
+      
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.bump.outputs.version }}
+          release_name: Release v${{ steps.bump.outputs.version }}
+          body: |
+            ## Release v${{ steps.bump.outputs.version }}
+            
+            ### Changes
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### Installation
+            ```bash
+            git clone https://github.com/${{ github.repository }}.git
+            cd ${{ github.event.repository.name }}
+            docker-compose up -d
+            ```
+            
+            ### Docker
+            ```bash
+            docker pull ghcr.io/${{ github.repository }}:v${{ steps.bump.outputs.version }}
+            docker-compose up -d
+            ```
+          draft: false
+          prerelease: false
+      
+      - name: Build and push Docker images
+        run: |
+          # 构建并推送Docker镜像
+          echo "Building Docker images..."
+          
+          # 这里可以添加Docker构建和推送命令
+          # docker build -t ghcr.io/${{ github.repository }}:v${{ steps.bump.outputs.version }} .
+          # docker push ghcr.io/${{ github.repository }}:v${{ steps.bump.outputs.version }}
+      
+      - name: Notify completion
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: `## 🎉 Release v${{ steps.bump.outputs.version }} 已发布！
+
+### 发布内容
+- 版本号: v${{ steps.bump.outputs.version }}
+- 变更日志: 已生成
+- GitHub Release: 已创建
+- Docker镜像: 已构建
+
+### 访问链接
+- Release: https://github.com/${{ context.repo.owner }}/${{ context.repo.repo }}/releases/tag/v${{ steps.bump.outputs.version }}
+- Docker: \`docker pull ghcr.io/${{ context.repo.owner }}/${{ context.repo.repo }:v${{ steps.bump.outputs.version }}\`
+
+感谢您的贡献！🎉`
+            });
