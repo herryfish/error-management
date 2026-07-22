@@ -105,7 +105,8 @@ jobs:
       - name: Push branch
         run: |
           BRANCH_NAME="${{ steps.analyze.outputs.branch }}"
-          git push origin $BRANCH_NAME
+          # 使用force-with-lease安全地强制推送
+          git push --force-with-lease origin $BRANCH_NAME
       
       - name: Create Pull Request
         id: create-pr
