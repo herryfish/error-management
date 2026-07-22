@@ -1,0 +1,40 @@
+name: Auto Fix Simple
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to fix'
+        required: true
+        default: '1'
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    
+    steps:
+      - name: Test auto-fix
+        run: |
+          echo "Auto-fix triggered for issue #${{ github.event.inputs.issue_number }}"
+          echo "Timestamp: $(date)"
+      
+      - name: Create comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            var issueNumber = context.payload.inputs.issue_number;
+            var timestamp = new Date().toISOString();
+            var body = '## 🤖 自动修复流程已触发\n\n';
+            body += '**触发时间**: ' + timestamp + '\n';
+            body += '**Issue编号**: #' + issueNumber + '\n\n';
+            body += '这是一个简化版的自动修复测试工作流。';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: body
+            });
