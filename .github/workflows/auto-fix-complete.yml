@@ -150,9 +150,22 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             var issueNumber = context.payload.inputs.issue_number || context.payload.issue.number;
-            var prNumber = context.payload.pull_request.number;
-            var prUrl = context.payload.pull_request.html_url;
             var timestamp = new Date().toISOString();
+            
+            // 获取PR信息
+            var prs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: context.repo.owner + ':' + '${{ steps.analyze.outputs.branch }}',
+              state: 'open'
+            });
+            
+            var prNumber = 'unknown';
+            var prUrl = 'unknown';
+            if (prs.data.length > 0) {
+              prNumber = prs.data[0].number;
+              prUrl = prs.data[0].html_url;
+            }
             
             var body = '## ✅ 自动修复PR已创建\n\n';
             body += '**创建时间**: ' + timestamp + '\n';
