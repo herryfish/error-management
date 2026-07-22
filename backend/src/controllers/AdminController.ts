@@ -1,3 +1,17 @@
+/**
+ * 管理员控制器
+ * 
+ * 处理管理员相关功能，包括：
+ * - 用户管理
+ * - 错题管理
+ * - 系统统计
+ * - 系统配置
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { User } from '../models/User'
@@ -7,6 +21,11 @@ import { Mastery } from '../models/Mastery'
 import { LLMUsage } from '../models/LLMUsage'
 import { SysConfig } from '../models/SysConfig'
 
+/**
+ * 管理员控制器类
+ * 
+ * 提供管理员相关的API接口
+ */
 export class AdminController {
   private userRepository = AppDataSource.getRepository(User)
   private questionRepository = AppDataSource.getRepository(Question)
@@ -15,6 +34,14 @@ export class AdminController {
   private llmUsageRepository = AppDataSource.getRepository(LLMUsage)
   private sysConfigRepository = AppDataSource.getRepository(SysConfig)
 
+  /**
+   * 获取所有用户
+   * 
+   * @param {Request} req - 请求对象
+   * @param {Response} res - 响应对象
+   * @param {NextFunction} next - 下一个中间件
+   * @returns {Promise<void>}
+   */
   getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const users = await this.userRepository.find({

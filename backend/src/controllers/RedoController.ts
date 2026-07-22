@@ -1,12 +1,39 @@
+/**
+ * 重做控制器
+ * 
+ * 处理重做相关功能，包括：
+ * - 获取重做列表
+ * - 创建重做记录
+ * - 批改重做记录
+ * - 学生改判
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { RedoRecord, RedoType } from '../models/RedoRecord'
 import { LLMService } from '../services/LLMService'
 
+/**
+ * 重做控制器类
+ * 
+ * 提供重做相关的API接口
+ */
 export class RedoController {
   private redoRepository = AppDataSource.getRepository(RedoRecord)
   private llmService = new LLMService()
 
+  /**
+   * 获取所有重做记录
+   * 
+   * @param {Request} req - 请求对象
+   * @param {Response} res - 响应对象
+   * @param {NextFunction} next - 下一个中间件
+   * @returns {Promise<void>}
+   */
   getAllRedos = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const redos = await this.redoRepository.find({

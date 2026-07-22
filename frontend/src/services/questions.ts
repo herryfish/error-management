@@ -1,32 +1,77 @@
+/**
+ * 错题服务
+ * 
+ * 提供错题相关API，包括：
+ * - 获取错题列表
+ * - 创建错题
+ * - 更新错题
+ * - 删除错题
+ * - AI识别错题
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import api from '@/utils/api'
 
+/**
+ * 错题接口
+ */
 export interface Question {
+  /** 题目ID */
   id: string
+  /** 题目标题 */
   title: string
+  /** 题目内容 */
   content: string
+  /** 科目（math/physics/chemistry） */
   subject: 'math' | 'physics' | 'chemistry'
+  /** 题目类型（choice/fill/answer） */
   type: 'choice' | 'fill' | 'answer'
+  /** 难度等级（1-5） */
   difficulty: number
+  /** 知识点标签 */
   knowledgePoints: string[]
+  /** 图片URL */
   imageUrl?: string
+  /** 原始图片URL */
   originalImageUrl?: string
+  /** 参考答案 */
   answer?: string
+  /** 解析说明 */
   explanation?: string
+  /** 是否AI识别 */
   isIdentified: boolean
+  /** 识别置信度 */
   confidence?: number
+  /** 学生ID */
   studentId: string
+  /** 创建时间 */
   createdAt: string
+  /** 更新时间 */
   updatedAt: string
 }
 
+/**
+ * 创建错题请求接口
+ */
 export interface CreateQuestionRequest {
+  /** 题目标题 */
   title: string
+  /** 题目内容 */
   content: string
+  /** 科目 */
   subject: string
+  /** 题目类型 */
   type: string
+  /** 难度等级 */
   difficulty: number
+  /** 知识点标签 */
   knowledgePoints: string[]
+  /** 参考答案 */
   answer?: string
+  /** 解析说明 */
   explanation?: string
 }
 

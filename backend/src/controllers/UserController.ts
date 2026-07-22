@@ -1,3 +1,17 @@
+/**
+ * 用户控制器
+ * 
+ * 处理用户相关功能，包括：
+ * - 获取用户列表
+ * - 获取用户详情
+ * - 更新用户信息
+ * - 删除用户
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { User } from '../models/User'
@@ -7,6 +21,11 @@ import { Question } from '../models/Question'
 import { Mastery } from '../models/Mastery'
 import { RedoRecord } from '../models/RedoRecord'
 
+/**
+ * 用户控制器类
+ * 
+ * 提供用户相关的API接口
+ */
 export class UserController {
   private userRepository = AppDataSource.getRepository(User)
   private studentRepository = AppDataSource.getRepository(Student)
@@ -15,6 +34,14 @@ export class UserController {
   private masteryRepository = AppDataSource.getRepository(Mastery)
   private redoRepository = AppDataSource.getRepository(RedoRecord)
 
+  /**
+   * 获取所有用户
+   * 
+   * @param {Request} req - 请求对象
+   * @param {Response} res - 响应对象
+   * @param {NextFunction} next - 下一个中间件
+   * @returns {Promise<void>}
+   */
   getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const users = await this.userRepository.find({

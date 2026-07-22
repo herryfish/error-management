@@ -1,10 +1,37 @@
+/**
+ * 掌握状态控制器
+ * 
+ * 处理掌握状态相关功能，包括：
+ * - 获取掌握列表
+ * - 创建掌握记录
+ * - 复习掌握记录
+ * - 获取复习队列
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { Mastery, MasteryStatus } from '../models/Mastery'
 
+/**
+ * 掌握状态控制器类
+ * 
+ * 提供掌握状态相关的API接口
+ */
 export class MasteryController {
   private masteryRepository = AppDataSource.getRepository(Mastery)
 
+  /**
+   * 获取所有掌握记录
+   * 
+   * @param {Request} req - 请求对象
+   * @param {Response} res - 响应对象
+   * @param {NextFunction} next - 下一个中间件
+   * @returns {Promise<void>}
+   */
   getAllMastery = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const masteryRecords = await this.masteryRepository.find({

@@ -1,14 +1,40 @@
+/**
+ * 相似题控制器
+ * 
+ * 处理相似题相关功能，包括：
+ * - 获取相似题列表
+ * - 生成相似题
+ * - 标记相似题适用性
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { SimilarQuestion } from '../models/SimilarQuestion'
 import { Question } from '../models/Question'
 import { LLMService } from '../services/LLMService'
 
+/**
+ * 相似题控制器类
+ * 
+ * 提供相似题相关的API接口
+ */
 export class SimilarController {
   private similarRepository = AppDataSource.getRepository(SimilarQuestion)
   private questionRepository = AppDataSource.getRepository(Question)
   private llmService = new LLMService()
 
+  /**
+   * 获取所有相似题
+   * 
+   * @param {Request} req - 请求对象
+   * @param {Response} res - 响应对象
+   * @param {NextFunction} next - 下一个中间件
+   * @returns {Promise<void>}
+   */
   getAllSimilar = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const similarQuestions = await this.similarRepository.find({

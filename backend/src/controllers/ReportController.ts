@@ -1,3 +1,17 @@
+/**
+ * 报告控制器
+ * 
+ * 处理报告相关功能，包括：
+ * - 获取周报
+ * - 获取日报
+ * - 获取统计信息
+ * - 生成周报
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { WeeklyReport } from '../models/WeeklyReport'
@@ -6,6 +20,11 @@ import { RedoRecord } from '../models/RedoRecord'
 import { Mastery, MasteryStatus } from '../models/Mastery'
 import { SimilarQuestion } from '../models/SimilarQuestion'
 
+/**
+ * 报告控制器类
+ * 
+ * 提供报告相关的API接口
+ */
 export class ReportController {
   private weeklyReportRepository = AppDataSource.getRepository(WeeklyReport)
   private questionRepository = AppDataSource.getRepository(Question)
@@ -13,6 +32,14 @@ export class ReportController {
   private masteryRepository = AppDataSource.getRepository(Mastery)
   private similarRepository = AppDataSource.getRepository(SimilarQuestion)
 
+  /**
+   * 获取周报
+   * 
+   * @param {Request} req - 请求对象
+   * @param {Response} res - 响应对象
+   * @param {NextFunction} next - 下一个中间件
+   * @returns {Promise<void>}
+   */
   getWeeklyReport = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = (req as any).user.id

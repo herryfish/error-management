@@ -1,3 +1,17 @@
+/**
+ * 变更请求控制器
+ * 
+ * 处理变更请求相关功能，包括：
+ * - 创建变更请求
+ * - 审批变更请求
+ * - 拒绝变更请求
+ * - 更新变更状态
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import {
@@ -7,9 +21,22 @@ import {
   ChangeRequestPriority,
 } from '../models/ChangeRequest'
 
+/**
+ * 变更请求控制器类
+ * 
+ * 提供变更请求相关的API接口
+ */
 export class ChangeRequestController {
   private changeRequestRepository = AppDataSource.getRepository(ChangeRequest)
 
+  /**
+   * 获取所有变更请求
+   * 
+   * @param {Request} req - 请求对象
+   * @param {Response} res - 响应对象
+   * @param {NextFunction} next - 下一个中间件
+   * @returns {Promise<void>}
+   */
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { status, type } = req.query

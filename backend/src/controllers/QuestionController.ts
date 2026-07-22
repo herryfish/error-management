@@ -1,13 +1,41 @@
+/**
+ * 错题控制器
+ * 
+ * 处理错题相关功能，包括：
+ * - 获取错题列表
+ * - 创建错题
+ * - 更新错题
+ * - 删除错题
+ * - AI识别错题
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { Question, Subject, QuestionType } from '../models/Question'
 import { LLMService } from '../services/LLMService'
 import { v4 as uuidv4 } from 'uuid'
 
+/**
+ * 错题控制器类
+ * 
+ * 提供错题相关的API接口
+ */
 export class QuestionController {
   private questionRepository = AppDataSource.getRepository(Question)
   private llmService = new LLMService()
 
+  /**
+   * 获取所有错题
+   * 
+   * @param {Request} req - 请求对象
+   * @param {Response} res - 响应对象
+   * @param {NextFunction} next - 下一个中间件
+   * @returns {Promise<void>}
+   */
   getAllQuestions = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const questions = await this.questionRepository.find({

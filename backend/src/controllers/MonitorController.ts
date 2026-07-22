@@ -1,10 +1,37 @@
+/**
+ * 监控控制器
+ * 
+ * 处理监控相关功能，包括：
+ * - 获取监控日志
+ * - 创建监控日志
+ * - 确认监控日志
+ * - 获取监控统计
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { MonitorLog, MonitorLogLevel, MonitorLogType } from '../models/MonitorLog'
 
+/**
+ * 监控控制器类
+ * 
+ * 提供监控相关的API接口
+ */
 export class MonitorController {
   private monitorLogRepository = AppDataSource.getRepository(MonitorLog)
 
+  /**
+   * 获取所有监控日志
+   * 
+   * @param {Request} req - 请求对象
+   * @param {Response} res - 响应对象
+   * @param {NextFunction} next - 下一个中间件
+   * @returns {Promise<void>}
+   */
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { level, type, acknowledged } = req.query

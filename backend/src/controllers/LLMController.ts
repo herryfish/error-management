@@ -1,10 +1,36 @@
+/**
+ * LLM控制器
+ * 
+ * 处理LLM相关功能，包括：
+ * - LLM用量查询
+ * - LLM配置管理
+ * - LLM用量统计
+ * 
+ * @author 开发团队
+ * @date 2026-07-22
+ * @version 1.0.0
+ */
+
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { LLMUsage } from '../models/LLMUsage'
 
+/**
+ * LLM控制器类
+ * 
+ * 提供LLM相关的API接口
+ */
 export class LLMController {
   private llmUsageRepository = AppDataSource.getRepository(LLMUsage)
 
+  /**
+   * 获取LLM用量
+   * 
+   * @param {Request} req - 请求对象
+   * @param {Response} res - 响应对象
+   * @param {NextFunction} next - 下一个中间件
+   * @returns {Promise<void>}
+   */
   getUsage = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const usage = await this.llmUsageRepository.find({
