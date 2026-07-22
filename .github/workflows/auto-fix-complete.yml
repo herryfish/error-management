@@ -54,8 +54,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # 创建并切换到新分支
-          git checkout -b $BRANCH_NAME
+          # 检查分支是否已存在
+          if git branch -a | grep -q $BRANCH_NAME; then
+            echo "分支 $BRANCH_NAME 已存在，切换到该分支"
+            git checkout $BRANCH_NAME
+          else
+            echo "创建新分支 $BRANCH_NAME"
+            git checkout -b $BRANCH_NAME
+          fi
       
       - name: Apply fixes
         run: |
