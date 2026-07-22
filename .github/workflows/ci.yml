@@ -85,8 +85,6 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: password
           MYSQL_DATABASE: error_management_test
-          MYSQL_USER: root
-          MYSQL_PASSWORD: password
         ports:
           - 3306:3306
         options: >-
@@ -135,8 +133,6 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: password
           MYSQL_DATABASE: error_management
-          MYSQL_USER: root
-          MYSQL_PASSWORD: password
         ports:
           - 3306:3306
         options: >-
