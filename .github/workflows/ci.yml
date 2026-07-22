@@ -277,12 +277,28 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const changelog = `${{ steps.changelog.outputs.changelog }}`;
-            const release = context.payload.release;
+            var changelog = '${{ steps.changelog.outputs.changelog }}';
+            var release = context.payload.release;
+            var repoOwner = context.repo.owner;
+            var repoName = context.repo.repo;
+            
+            var body = '## Changes\n\n';
+            body += changelog + '\n\n';
+            body += '## Installation\n\n';
+            body += '```bash\n';
+            body += 'git clone https://github.com/' + repoOwner + '/' + repoName + '.git\n';
+            body += 'cd ' + repoName + '\n';
+            body += 'docker-compose up -d\n';
+            body += '```\n\n';
+            body += '## Docker\n\n';
+            body += '```bash\n';
+            body += 'docker pull ghcr.io/' + repoOwner + '/' + repoName + ':latest\n';
+            body += 'docker-compose up -d\n';
+            body += '```';
             
             await github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner: repoOwner,
+              repo: repoName,
               release_id: release.id,
-              body: `## Changes\n\n${changelog}\n\n## Installation\n\n\`\`\`bash\ngit clone https://github.com/${context.repo.owner}/${context.repo.repo}.git\ncd ${context.repo.repo}\ndocker-compose up -d\n\`\`\`\n\n## Docker\n\n\`\`\`bash\ndocker pull ghcr.io/${context.repo.owner}/${context.repo.repo}:latest\ndocker-compose up -d\n\`\`\``
+              body: body
             })
