@@ -170,21 +170,23 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            var version = '${{ steps.bump.outputs.version }}';
+            var repoOwner = context.repo.owner;
+            var repoName = context.repo.repo;
+            var body = '## 🎉 Release v' + version + ' 已发布！\n\n';
+            body += '### 发布内容\n';
+            body += '- 版本号: v' + version + '\n';
+            body += '- 变更日志: 已生成\n';
+            body += '- GitHub Release: 已创建\n';
+            body += '- Docker镜像: 已构建\n\n';
+            body += '### 访问链接\n';
+            body += '- Release: https://github.com/' + repoOwner + '/' + repoName + '/releases/tag/v' + version + '\n';
+            body += '- Docker: `docker pull ghcr.io/' + repoOwner + '/' + repoName + ':v' + version + '`\n\n';
+            body += '感谢您的贡献！🎉';
+            
             await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner: repoOwner,
+              repo: repoName,
               issue_number: context.payload.pull_request.number,
-              body: `## 🎉 Release v${{ steps.bump.outputs.version }} 已发布！
-
-### 发布内容
-- 版本号: v${{ steps.bump.outputs.version }}
-- 变更日志: 已生成
-- GitHub Release: 已创建
-- Docker镜像: 已构建
-
-### 访问链接
-- Release: https://github.com/${{ context.repo.owner }}/${{ context.repo.repo }}/releases/tag/v${{ steps.bump.outputs.version }}
-- Docker: \`docker pull ghcr.io/${{ context.repo.owner }}/${{ context.repo.repo }:v${{ steps.bump.outputs.version }}\`
-
-感谢您的贡献！🎉`
+              body: body
             });
