@@ -1,7 +1,6 @@
 import OpenAI from 'openai'
 import { AppDataSource } from '../config/database'
 import { LLMUsage, LLMScene } from '../models/LLMUsage'
-import { v4 as uuidv4 } from 'uuid'
 
 interface LLMConfig {
   provider: string
@@ -303,7 +302,7 @@ Return the result in JSON format.`,
   }
 
   private async imageToBase64(imagePath: string): Promise<string> {
-    const fs = require('fs')
+    const fs = await import('fs')
     const imageBuffer = fs.readFileSync(imagePath)
     return imageBuffer.toString('base64')
   }
@@ -342,31 +341,26 @@ Return the result in JSON format.`,
   ): Promise<string> {
     const startTime = Date.now()
 
-    try {
-      const result = await this.callPrimaryLLMForSimilar(
-        questionContent,
-        knowledgePoints
-      )
-      const latencyMs = Date.now() - startTime
+    const result = await this.callPrimaryLLMForSimilar(
+      questionContent,
+      knowledgePoints
+    )
+    const latencyMs = Date.now() - startTime
 
-      // Record usage
-      await this.recordUsage({
-        userId,
-        scene: LLMScene.SIMILAR,
-        provider: this.config.primary.provider,
-        model: this.config.primary.model,
-        isFallback: false,
-        tokens: result.tokens || { input: 0, output: 0, total: 0 },
-        cost: 0,
-        latencyMs,
-        success: true,
-      })
+    // Record usage
+    await this.recordUsage({
+      userId,
+      scene: LLMScene.SIMILAR,
+      provider: this.config.primary.provider,
+      model: this.config.primary.model,
+      isFallback: false,
+      tokens: result.tokens || { input: 0, output: 0, total: 0 },
+      cost: 0,
+      latencyMs,
+      success: true,
+    })
 
-      return result.content
-    } catch (error) {
-      // Handle fallback similar logic here
-      throw error
-    }
+    return result.content
   }
 
   private async callPrimaryLLMForSimilar(
