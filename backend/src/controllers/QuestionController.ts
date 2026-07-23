@@ -92,13 +92,26 @@ export class QuestionController {
       const imageUrl = req.file ? `/uploads/${req.file.filename}` : null
       const userId = (req as any).user.id
 
+      let parsedKnowledgePoints: string[] = []
+      if (knowledgePoints) {
+        if (typeof knowledgePoints === 'string') {
+          try {
+            parsedKnowledgePoints = JSON.parse(knowledgePoints)
+          } catch (e) {
+            parsedKnowledgePoints = knowledgePoints.split(',').map(s => s.trim()).filter(Boolean)
+          }
+        } else if (Array.isArray(knowledgePoints)) {
+          parsedKnowledgePoints = knowledgePoints
+        }
+      }
+
       const question = this.questionRepository.create({
         title,
         content,
         subject,
         type,
         difficulty: parseInt(difficulty) || 1,
-        knowledgePoints: knowledgePoints ? JSON.parse(knowledgePoints) : [],
+        knowledgePoints: parsedKnowledgePoints,
         imageUrl,
         answer,
         explanation,

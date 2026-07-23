@@ -37,6 +37,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { showToast } from 'vant'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -48,20 +49,17 @@ const form = ref({
 
 const onSubmit = async (values: any) => {
   try {
-    // TODO: Implement actual login API call
-    console.log('Login values:', values)
-    
-    // Mock login for now
-    userStore.setToken('mock-token')
-    userStore.setUser({
-      id: '1',
-      username: values.username,
-      role: 'student',
-    })
-    
-    router.push('/student')
-  } catch (error) {
-    console.error('Login failed:', error)
+    const res = await userStore.login(values.username, values.password)
+    const role = res.user?.role || localStorage.getItem('userRole') || 'student'
+    if (role === 'parent') {
+      router.push('/parent')
+    } else if (role === 'admin') {
+      router.push('/admin')
+    } else {
+      router.push('/student')
+    }
+  } catch (error: any) {
+    showToast(error.message || '登录失败，请检查用户名和密码')
   }
 }
 </script>

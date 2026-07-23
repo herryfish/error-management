@@ -54,6 +54,36 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/student/SimilarQuestions.vue'),
     meta: { requiresAuth: true, role: 'student' },
   },
+  {
+    path: '/tasks',
+    name: 'TodayTasks',
+    component: () => import('@/views/student/TodayTasks.vue'),
+    meta: { requiresAuth: true, role: 'student' },
+  },
+  {
+    path: '/mastery',
+    name: 'MasteryProgress',
+    component: () => import('@/views/student/MasteryProgress.vue'),
+    meta: { requiresAuth: true, role: 'student' },
+  },
+  {
+    path: '/weak-points',
+    name: 'WeakPoints',
+    component: () => import('@/views/student/WeakPoints.vue'),
+    meta: { requiresAuth: true, role: 'student' },
+  },
+  {
+    path: '/redo',
+    name: 'TodayRedo',
+    component: () => import('@/views/student/TodayRedo.vue'),
+    meta: { requiresAuth: true, role: 'student' },
+  },
+  {
+    path: '/similar',
+    name: 'SimilarPractice',
+    component: () => import('@/views/student/SimilarPractice.vue'),
+    meta: { requiresAuth: true, role: 'student' },
+  },
   // Parent routes
   {
     path: '/parent',
@@ -103,6 +133,24 @@ const routes: RouteRecordRaw[] = [
     path: '/settings',
     name: 'Settings',
     component: () => import('@/views/common/Settings.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/account',
+    name: 'Account',
+    component: () => import('@/views/common/Account.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: () => import('@/views/common/Notifications.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: () => import('@/views/common/About.vue'),
     meta: { requiresAuth: true },
   },
 ]

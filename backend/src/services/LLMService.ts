@@ -228,18 +228,21 @@ export class LLMService {
               content: [
                 {
                   type: 'text',
-                  text: `Please analyze this math/physics/chemistry question image and extract:
-1. Title (if visible)
-2. Full question content (including formulas, conditions, etc.)
-3. Subject (math, physics, or chemistry)
-4. Question type (choice, fill, or answer)
-5. Difficulty level (1-5)
-6. Knowledge points/tags
-7. Answer (if visible)
-8. Explanation (if visible)
-Confidence score (0-1) for the identification.
+                  text: `Analyze this math/physics/chemistry question image. You MUST return ONLY a valid JSON object with these exact fields (no markdown, no explanation, just the JSON):
 
-Return the result in JSON format.`,
+{
+  "title": "question title",
+  "content": "full question text with formulas",
+  "subject": "math" or "physics" or "chemistry",
+  "type": "choice" or "fill" or "answer",
+  "difficulty": 1-5,
+  "knowledgePoints": ["tag1", "tag2"],
+  "answer": "correct answer if visible",
+  "explanation": "solution explanation if visible",
+  "confidence": 0.0-1.0
+}
+
+IMPORTANT: Return ONLY the JSON object, nothing else. No markdown code blocks, no text before or after.`,
                 },
                 {
                   type: 'image_url',
@@ -266,15 +269,45 @@ Return the result in JSON format.`,
               },
             }
           } catch (parseError) {
-            // If JSON parsing fails, return raw content
-            return {
-              content,
-              confidence: 0.5,
-              tokens: {
-                input: response.usage?.prompt_tokens || 0,
-                output: response.usage?.completion_tokens || 0,
-                total: response.usage?.total_tokens || 0,
-              },
+            // Try to extract JSON from markdown code blocks or extra text
+            let jsonStr = content
+            const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
+            if (jsonMatch) {
+              jsonStr = jsonMatch[1].trim()
+            } else {
+              // Try to find a JSON object in the text
+              const objMatch = content.match(/\{[\s\S]*\}/)
+              if (objMatch) {
+                jsonStr = objMatch[0]
+              }
+            }
+            
+            try {
+              const parsed = JSON.parse(jsonStr)
+              return {
+                ...parsed,
+                tokens: {
+                  input: response.usage?.prompt_tokens || 0,
+                  output: response.usage?.completion_tokens || 0,
+                  total: response.usage?.total_tokens || 0,
+                },
+              }
+            } catch {
+              // Last resort: return raw content with fields extracted by best effort
+              return {
+                title: '识别的题目',
+                content: content,
+                subject: 'math',
+                type: 'answer',
+                difficulty: 1,
+                knowledgePoints: [],
+                confidence: 0.3,
+                tokens: {
+                  input: response.usage?.prompt_tokens || 0,
+                  output: response.usage?.completion_tokens || 0,
+                  total: response.usage?.total_tokens || 0,
+                },
+              }
             }
           }
         }

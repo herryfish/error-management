@@ -96,21 +96,45 @@ export const questionService = {
   },
 
   async create(data: CreateQuestionRequest, image?: File): Promise<Question> {
+    console.log('[create] data:', data)
+    console.log('[create] image:', image ? `${image.name} (${image.size}B)` : 'none')
+    
     const formData = new FormData()
     Object.entries(data).forEach(([key, value]) => {
-      if (key === 'knowledgePoints') {
-        formData.append(key, JSON.stringify(value))
-      } else {
-        formData.append(key, String(value))
+      if (value !== undefined && value !== null) {
+        if (key === 'knowledgePoints') {
+          formData.append(key, JSON.stringify(value))
+        } else {
+          formData.append(key, String(value))
+        }
       }
     })
-    if (image) {
-      formData.append('image', image)
+    if (image && image instanceof File) {
+      formData.append('image', image, image.name || 'photo.jpg')
     }
-    const response = await api.post('/questions', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    
+    for (const [key, value] of formData.entries()) {
+      console.log('[create] formData:', key, value instanceof File ? `File(${value.name})` : value)
+    }
+    
+    const token = localStorage.getItem('token')
+    console.log('[create] sending request to /api/questions...')
+    
+    const response = await fetch('/api/questions', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
     })
-    return response.data
+    
+    console.log('[create] response status:', response.status)
+    const result = await response.json()
+    console.log('[create] result:', result)
+    
+    if (!response.ok) {
+      throw new Error(result.message || `HTTP ${response.status}`)
+    }
+    
+    return result
   },
 
   async update(id: string, data: Partial<CreateQuestionRequest>): Promise<Question> {
@@ -122,13 +146,29 @@ export const questionService = {
     await api.delete(`/questions/${id}`)
   },
 
-  async identify(image: File): Promise<{ question: Question; identification: any }> {
+  async identify(image: File): Promise<any> {
+    console.log('[identify] image type:', typeof image, image?.constructor?.name)
+    console.log('[identify] image instanceof File:', image instanceof File)
+    console.log('[identify] image.name:', image?.name, 'size:', image?.size, 'type:', image?.type)
+    
     const formData = new FormData()
-    formData.append('image', image)
-    const response = await api.post('/questions/identify', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    formData.append('image', image, image.name || 'photo.jpg')
+    
+    const token = localStorage.getItem('token')
+    const response = await fetch('/api/questions/identify', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
     })
-    return response.data
+    
+    const result = await response.json()
+    console.log('[identify] response:', response.status, result)
+    
+    if (!response.ok) {
+      throw new Error(result.message || `HTTP ${response.status}`)
+    }
+    
+    return result
   },
 
   async getByStudent(studentId: string): Promise<Question[]> {

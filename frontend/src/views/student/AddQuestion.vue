@@ -33,19 +33,10 @@
               :rules="[{ required: true, message: '请选择科目' }]"
             >
               <template #input>
-                <van-radio-group
-                  v-model="form.subject"
-                  direction="horizontal"
-                >
-                  <van-radio name="math">
-                    数学
-                  </van-radio>
-                  <van-radio name="physics">
-                    物理
-                  </van-radio>
-                  <van-radio name="chemistry">
-                    化学
-                  </van-radio>
+                <van-radio-group v-model="form.subject" direction="horizontal">
+                  <van-radio name="math">数学</van-radio>
+                  <van-radio name="physics">物理</van-radio>
+                  <van-radio name="chemistry">化学</van-radio>
                 </van-radio-group>
               </template>
             </van-field>
@@ -55,19 +46,10 @@
               :rules="[{ required: true, message: '请选择题型' }]"
             >
               <template #input>
-                <van-radio-group
-                  v-model="form.type"
-                  direction="horizontal"
-                >
-                  <van-radio name="choice">
-                    选择题
-                  </van-radio>
-                  <van-radio name="fill">
-                    填空题
-                  </van-radio>
-                  <van-radio name="answer">
-                    解答题
-                  </van-radio>
+                <van-radio-group v-model="form.type" direction="horizontal">
+                  <van-radio name="choice">选择题</van-radio>
+                  <van-radio name="fill">填空题</van-radio>
+                  <van-radio name="answer">解答题</van-radio>
                 </van-radio-group>
               </template>
             </van-field>
@@ -102,13 +84,7 @@
             />
           </van-cell-group>
           <div style="margin: 16px">
-            <van-button
-              round
-              block
-              type="primary"
-              native-type="submit"
-              :loading="submitting"
-            >
+            <van-button round block type="primary" native-type="submit" :loading="submitting">
               提交
             </van-button>
           </div>
@@ -117,26 +93,26 @@
       
       <van-tab title="拍照识别">
         <div class="photo-section">
-          <van-uploader
-            v-model="fileList"
-            :max-count="1"
-            :after-read="afterRead"
+          <input
+            ref="fileInputRef"
+            type="file"
             accept="image/*"
-            :deletable="true"
-          >
-            <template #default>
-              <div class="upload-content">
-                <van-icon
-                  name="photograph"
-                  size="48"
-                />
-                <div>点击拍照或上传图片</div>
-              </div>
+            capture="environment"
+            style="display: none"
+            @change="onFileChange"
+          />
+          <div class="upload-content" @click="triggerFileInput">
+            <template v-if="previewUrl">
+              <img :src="previewUrl" style="max-width: 200px; max-height: 200px; border-radius: 8px;" />
             </template>
-          </van-uploader>
+            <template v-else>
+              <van-icon name="photograph" size="48" />
+              <div>点击拍照或上传图片</div>
+            </template>
+          </div>
           
           <van-button
-            v-if="fileList.length > 0"
+            v-if="selectedFile"
             type="primary"
             block
             :loading="identifying"
@@ -145,40 +121,19 @@
             AI识别
           </van-button>
           
-          <div
-            v-if="identifiedQuestion"
-            class="identified-result"
-          >
+          <div v-if="identifiedQuestion" class="identified-result">
             <van-cell-group inset>
               <van-cell
                 title="识别结果"
                 :value="`${((identifiedQuestion.confidence || 0) * 100).toFixed(0)}%`"
               />
-              <van-field
-                v-model="identifiedQuestion.title"
-                label="标题"
-              />
-              <van-field
-                v-model="identifiedQuestion.content"
-                type="textarea"
-                rows="2"
-                label="内容"
-              />
-              <van-field
-                v-model="identifiedQuestion.answer"
-                type="textarea"
-                rows="2"
-                label="答案"
-              />
+              <van-field v-model="identifiedQuestion.title" label="标题" />
+              <van-field v-model="identifiedQuestion.content" type="textarea" rows="2" label="内容" />
+              <van-field v-model="identifiedQuestion.answer" type="textarea" rows="2" label="答案" />
             </van-cell-group>
-            <van-button
-              type="primary"
-              block
-              :loading="submitting"
-              @click="saveIdentifiedQuestion"
-            >
+            <button type="button" style="width:100%;padding:12px;background:#1989fa;color:#fff;border:none;border-radius:20px;font-size:16px;margin-top:12px;" @click="onSaveClick">
               保存
-            </van-button>
+            </button>
           </div>
         </div>
       </van-tab>
@@ -187,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { questionService, type Question } from '@/services/questions'
 import { showToast } from 'vant'
@@ -196,8 +151,10 @@ const router = useRouter()
 const activeTab = ref(0)
 const submitting = ref(false)
 const identifying = ref(false)
-const fileList = ref<any[]>([])
 const identifiedQuestion = ref<Question | null>(null)
+const selectedFile = ref<File | null>(null)
+const previewUrl = ref('')
+const fileInputRef = ref<HTMLInputElement | null>(null)
 
 const form = ref({
   title: '',
@@ -215,8 +172,24 @@ const knowledgePoints = computed(() => {
   return knowledgePointsStr.value.split(',').map(s => s.trim()).filter(s => s)
 })
 
-const afterRead = (file: any) => {
-  file.status = 'done'
+watch(identifiedQuestion, (val) => {
+  console.log('[watch] identifiedQuestion changed:', val ? 'has data' : 'null')
+})
+
+const triggerFileInput = () => {
+  fileInputRef.value?.click()
+}
+
+const onFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  console.log('[onFileChange] files:', input.files)
+  if (input.files && input.files.length > 0) {
+    const file = input.files[0]
+    console.log('[onFileChange] file:', file.name, file.size, file.type, file instanceof File)
+    selectedFile.value = file
+    previewUrl.value = URL.createObjectURL(file)
+    showToast('图片已选择')
+  }
 }
 
 const onSubmit = async () => {
@@ -225,7 +198,7 @@ const onSubmit = async () => {
     await questionService.create({
       ...form.value,
       knowledgePoints: knowledgePoints.value,
-    })
+    }, selectedFile.value || undefined)
     showToast('录入成功')
     router.back()
   } catch (error: any) {
@@ -236,15 +209,18 @@ const onSubmit = async () => {
 }
 
 const identifyQuestion = async () => {
-  if (fileList.value.length === 0) {
+  console.log('[identifyQuestion] selectedFile:', selectedFile.value)
+  
+  if (!selectedFile.value) {
     showToast('请先上传图片')
     return
   }
   
   identifying.value = true
   try {
-    const result = await questionService.identify(fileList.value[0].file)
-    identifiedQuestion.value = result.question
+    const result = await questionService.identify(selectedFile.value)
+    console.log('[identify] result:', JSON.stringify(result).substring(0, 200))
+    identifiedQuestion.value = result.data?.question || result.question || null
     showToast('识别成功')
   } catch (error: any) {
     showToast(error.message || '识别失败')
@@ -253,21 +229,18 @@ const identifyQuestion = async () => {
   }
 }
 
+const onSaveClick = () => {
+  console.log('[onSaveClick] triggered')
+  console.log('[onSaveClick] identifiedQuestion:', identifiedQuestion.value)
+  saveIdentifiedQuestion()
+}
+
 const saveIdentifiedQuestion = async () => {
   if (!identifiedQuestion.value) return
   
   submitting.value = true
   try {
-    await questionService.create({
-      title: identifiedQuestion.value.title,
-      content: identifiedQuestion.value.content,
-      subject: identifiedQuestion.value.subject,
-      type: identifiedQuestion.value.type,
-      difficulty: identifiedQuestion.value.difficulty,
-      knowledgePoints: identifiedQuestion.value.knowledgePoints || [],
-      answer: identifiedQuestion.value.answer,
-      explanation: identifiedQuestion.value.explanation,
-    })
+    // 后端 identifyQuestion 已经保存了题目到数据库，这里只需确认并返回
     showToast('保存成功')
     router.back()
   } catch (error: any) {
@@ -297,6 +270,7 @@ const saveIdentifiedQuestion = async () => {
   height: 200px;
   border: 2px dashed #ddd;
   border-radius: 8px;
+  margin: 0 auto;
 }
 
 .identified-result {

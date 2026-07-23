@@ -22,9 +22,7 @@
         style="margin-top: 16px"
       >
         <van-cell title="题目内容">
-          <div class="question-content">
-            {{ question.content }}
-          </div>
+          <div class="question-content" v-html="renderMath(question.content)"></div>
         </van-cell>
       </van-cell-group>
       
@@ -77,6 +75,32 @@
           提示
         </van-button>
       </div>
+
+      <van-dialog
+        v-model:show="showHintDialog"
+        title="题目提示"
+        show-cancel-button
+        confirm-text="我知道了"
+        cancel-text="关闭"
+      >
+        <div style="padding: 16px;">
+          <div v-if="question.answer" style="margin-bottom: 12px;">
+            <div style="font-weight: bold; color: #1989fa; margin-bottom: 4px;">参考答案：</div>
+            <div v-html="renderMath(question.answer)"></div>
+          </div>
+          <div v-if="question.explanation" style="margin-bottom: 12px;">
+            <div style="font-weight: bold; color: #1989fa; margin-bottom: 4px;">解析：</div>
+            <div v-html="renderMath(question.explanation)"></div>
+          </div>
+          <div v-if="question.knowledgePoints?.length">
+            <div style="font-weight: bold; color: #1989fa; margin-bottom: 4px;">知识点：</div>
+            <van-tag v-for="p in question.knowledgePoints" :key="p" type="primary" style="margin-right: 6px; margin-bottom: 4px;">{{ p }}</van-tag>
+          </div>
+          <div v-if="!question.answer && !question.explanation" style="color: #999; text-align: center;">
+            暂无提示信息，请先自行思考
+          </div>
+        </div>
+      </van-dialog>
     </div>
     
     <van-empty
@@ -92,6 +116,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { questionService, type Question } from '@/services/questions'
 import { redoService } from '@/services/redos'
 import { showToast } from 'vant'
+import { renderMath } from '@/utils/math'
 
 const route = useRoute()
 const router = useRouter()
@@ -99,6 +124,7 @@ const question = ref<Question | null>(null)
 const answer = ref('')
 const fileList = ref<any[]>([])
 const submitting = ref(false)
+const showHintDialog = ref(false)
 
 const loadQuestion = async () => {
   try {
@@ -121,8 +147,9 @@ const submitRedo = async () => {
   
   submitting.value = true
   try {
-    if (fileList.value.length > 0 && fileList.value[0].file) {
-      await redoService.createPhotoRedo(question.value!.id, fileList.value[0].file)
+    const rawFile = fileList.value.length > 0 ? (fileList.value[0].file?.raw || fileList.value[0].file || fileList.value[0]) : undefined
+    if (rawFile && (rawFile instanceof File || (rawFile.name && rawFile.size))) {
+      await redoService.createPhotoRedo(question.value!.id, rawFile)
     } else {
       await redoService.create({
         questionId: question.value!.id,
@@ -140,8 +167,7 @@ const submitRedo = async () => {
 }
 
 const showHint = () => {
-  // TODO: Show hint or guidance mode
-  showToast('提示功能开发中')
+  showHintDialog.value = true
 }
 
 const getSubjectText = (subject: string) => {

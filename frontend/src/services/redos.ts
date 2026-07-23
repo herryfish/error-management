@@ -90,10 +90,20 @@ export const redoService = {
     const formData = new FormData()
     formData.append('questionId', questionId)
     formData.append('image', image)
-    const response = await api.post('/redos/photo', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    
+    const token = localStorage.getItem('token')
+    const response = await fetch('/api/redos/photo', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
     })
-    return response.data
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: '提交失败' }))
+      throw new Error(errorData.message || `HTTP ${response.status}`)
+    }
+    
+    return response.json()
   },
 
   async grade(id: string, data: GradeRedoRequest): Promise<RedoRecord> {

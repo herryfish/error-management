@@ -22,25 +22,22 @@
         style="margin-top: 16px"
       >
         <van-cell title="题目内容">
-          <div class="question-content">
-            {{ question.content }}
+          <div class="question-content" v-html="renderMath(question.content)"></div>
+          <div v-if="question.imageUrl" style="margin-top: 12px;">
+            <van-image :src="question.imageUrl" width="100%" fit="contain" radius="8" />
           </div>
         </van-cell>
         <van-cell
           v-if="question.answer"
           title="参考答案"
         >
-          <div class="answer-content">
-            {{ question.answer }}
-          </div>
+          <div class="answer-content" v-html="renderMath(question.answer)"></div>
         </van-cell>
         <van-cell
           v-if="question.explanation"
           title="解析"
         >
-          <div class="explanation-content">
-            {{ question.explanation }}
-          </div>
+          <div class="explanation-content" v-html="renderMath(question.explanation)"></div>
         </van-cell>
       </van-cell-group>
       
@@ -90,6 +87,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { questionService, type Question } from '@/services/questions'
+import { renderMath } from '@/utils/math'
 
 const route = useRoute()
 const router = useRouter()
