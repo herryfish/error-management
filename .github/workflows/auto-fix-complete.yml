@@ -159,7 +159,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            var issueNumber = context.payload.inputs.issue_number || context.payload.issue.number;
+            var issueNumber = parseInt('${{ steps.analyze.outputs.issue_number }}', 10);
             var prNumber = '${{ steps.create-pr.outputs.pr_number }}';
             var prUrl = '${{ steps.create-pr.outputs.pr_url }}';
             var timestamp = new Date().toISOString();
@@ -193,7 +193,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            var issueNumber = context.payload.issue.number;
+            var issueNumber = parseInt('${{ steps.analyze.outputs.issue_number }}', 10);
             
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
