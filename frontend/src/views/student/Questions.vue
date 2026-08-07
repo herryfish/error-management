@@ -23,20 +23,30 @@
           :finished="finished"
           @load="loadQuestions"
         >
-          <van-cell
+          <div
             v-for="question in questions"
             :key="question.id"
-            :title="question.title"
-            :label="question.subject"
-            is-link
+            class="question-card"
             @click="viewQuestion(question.id)"
           >
-            <template #right-icon>
+            <div class="question-header">
+              <span class="question-title">{{ question.title }}</span>
               <van-tag :type="getSubjectType(question.subject)">
                 {{ getSubjectText(question.subject) }}
               </van-tag>
-            </template>
-          </van-cell>
+            </div>
+            
+            <div
+              v-if="question.content"
+              class="question-content-preview"
+              v-html="renderMath(question.content)"
+            ></div>
+            
+            <div class="question-footer">
+              <span class="question-date">{{ formatDate(question.createdAt) }}</span>
+              <span class="question-link">查看详情 <van-icon name="arrow" /></span>
+            </div>
+          </div>
         </van-list>
       </van-tab>
       <van-tab title="待复习">
@@ -103,6 +113,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { questionService, type Question } from '@/services/questions'
+import { renderMath } from '@/utils/math'
 
 const router = useRouter()
 
@@ -134,7 +145,6 @@ const viewQuestion = (id: string) => {
 }
 
 const onSearch = () => {
-  // TODO: Implement search
   showSearch.value = false
 }
 
@@ -156,6 +166,16 @@ const getSubjectText = (subject: string) => {
   return texts[subject] || subject
 }
 
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return ''
+  try {
+    const date = new Date(dateStr)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  } catch {
+    return dateStr
+  }
+}
+
 onMounted(() => {
   loadQuestions()
 })
@@ -164,6 +184,63 @@ onMounted(() => {
 <style scoped>
 .questions-page {
   padding-bottom: 80px;
+  background-color: #f7f8fa;
+  min-height: 100vh;
+}
+
+.question-card {
+  margin: 12px 16px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.question-card:active {
+  transform: scale(0.99);
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.question-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323233;
+}
+
+.question-content-preview {
+  font-size: 14px;
+  color: #646566;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  max-height: 4.5em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.question-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #969799;
+  border-top: 1px solid #ebedf0;
+  padding-top: 8px;
+}
+
+.question-link {
+  color: var(--van-primary-color, #1989fa);
+  display: flex;
+  align-items: center;
 }
 
 .add-button {
