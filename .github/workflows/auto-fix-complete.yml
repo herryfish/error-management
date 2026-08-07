@@ -111,6 +111,8 @@ jobs:
       
       - name: Create Pull Request
         id: create-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BRANCH_NAME="${{ steps.analyze.outputs.branch }}"
           ISSUE_NUMBER="${{ steps.analyze.outputs.issue_number }}"
@@ -145,12 +147,12 @@ jobs:
             --body-file pr_body.md \
             --label "auto-fix,bug"
         
-        # 获取PR信息
-        PR_NUMBER=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
-        PR_URL=$(gh pr list --head "$BRANCH_NAME" --json url --jq '.[0].url')
-        
-        echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-        echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+          # 获取PR信息
+          PR_NUMBER=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
+          PR_URL=$(gh pr list --head "$BRANCH_NAME" --json url --jq '.[0].url')
+          
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
             
       - name: Update issue with PR link
         uses: actions/github-script@v7
