@@ -1,62 +1,49 @@
 <template>
   <div class="admin-dashboard">
-    <van-nav-bar
-      title="管理员端"
-      left-arrow
-      @click-left="$router.back()"
-    >
-      <template #right>
-        <van-icon
-          name="setting-o"
-          @click="$router.push('/settings')"
-        />
-      </template>
-    </van-nav-bar>
+    <van-nav-bar title="管理员控制台" />
     
-    <van-cell-group inset>
-      <van-cell
-        title="系统状态"
-        is-link
-        :value="healthStatus"
-        @click="$router.push('/admin/health')"
-      />
-      <van-cell
-        title="用户统计"
-        is-link
-        :value="`${stats.totalUsers}人`"
-        @click="$router.push('/admin/users')"
-      />
-      <van-cell
-        title="LLM用量"
-        is-link
-        :value="`${stats.totalLLMCalls}次`"
-        @click="$router.push('/admin/llm')"
-      />
-    </van-cell-group>
+    <van-notice-bar
+      left-icon="volume-o"
+      text="提示：可在此监控系统运行指标、控制全局配置及查看 LLM 用量分布。"
+    />
     
-    <van-cell-group
-      inset
-      style="margin-top: 16px"
-    >
+    <van-grid :column-num="2" style="margin: 16px 0;">
+      <van-grid-item text="总用户量" :badge="stats.users?.total || 0" icon="user-o" />
+      <van-grid-item text="错题总数" :badge="stats.questions?.total || 0" icon="orders-o" />
+      <van-grid-item text="重做总数" :badge="stats.redos?.total || 0" icon="records" />
+      <van-grid-item text="LLM成功率" :badge="`${stats.llm?.successRate || 0}%`" icon="fire-o" />
+    </van-grid>
+    
+    <van-cell-group inset title="管理与监控功能">
       <van-cell
         title="用户管理"
         is-link
-        @click="$router.push('/admin/users')"
+        to="/admin/users"
+        icon="user-o"
       />
       <van-cell
-        title="系统配置"
+        title="错题统计与管理"
         is-link
-        @click="$router.push('/admin/config')"
+        to="/admin/questions"
+        icon="orders-o"
       />
       <van-cell
-        title="系统健康"
+        title="系统健康与状态"
         is-link
-        @click="$router.push('/admin/health')"
+        to="/admin/health"
+        icon="desktop-o"
       />
       <van-cell
-        title="错题统计"
+        title="系统配置管理"
         is-link
-        @click="$router.push('/admin/questions')"
+        to="/admin/config"
+        icon="setting-o"
+      />
+      <van-cell
+        title="LLM 用量监控"
+        is-link
+        to="/admin/llm"
+        icon="chart-trending-o"
       />
     </van-cell-group>
   </div>
@@ -66,28 +53,26 @@
 import { ref, onMounted } from 'vue'
 import api from '@/utils/api'
 
-const healthStatus = ref('正常')
-const stats = ref({
-  totalUsers: 0,
-  totalLLMCalls: 0,
-})
+const stats = ref<any>({})
 
-onMounted(async () => {
+const loadStats = async () => {
   try {
     const response = await api.get('/admin/stats')
-    stats.value = {
-      totalUsers: response.data.users.total,
-      totalLLMCalls: response.data.llm.totalCalls,
+    if (response.data) {
+      stats.value = response.data
     }
   } catch (error) {
-    console.error('Failed to load admin stats:', error)
+    console.error('Failed to load system stats:', error)
   }
+}
+
+onMounted(() => {
+  loadStats()
 })
 </script>
 
 <style scoped>
 .admin-dashboard {
-  padding: 16px;
-  padding-bottom: 80px;
+  padding-bottom: 30px;
 }
 </style>

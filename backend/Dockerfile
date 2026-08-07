@@ -15,7 +15,7 @@ COPY . .
 # Build application
 RUN npm run build
 
-# Production stage
+# Copy node_modules from builder to production stage
 FROM node:18-alpine
 
 WORKDIR /app
@@ -23,10 +23,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm ci --only=production
-
-# Copy built files
+# Copy built node_modules and dist directly
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
 # Create uploads directory
@@ -37,7 +35,7 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+  CMD node -e "require('http').get('http://localhost:3000/health', (r) => { if (r.statusCode !== 200) process.exit(1); })" || exit 1
 
 # Start application
 CMD ["node", "dist/index.js"]

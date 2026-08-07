@@ -240,7 +240,11 @@ const saveIdentifiedQuestion = async () => {
   
   submitting.value = true
   try {
-    // 后端 identifyQuestion 已经保存了题目到数据库，这里只需确认并返回
+    await questionService.update(identifiedQuestion.value.id, {
+      title: identifiedQuestion.value.title,
+      content: identifiedQuestion.value.content,
+      answer: identifiedQuestion.value.answer
+    })
     showToast('保存成功')
     router.back()
   } catch (error: any) {

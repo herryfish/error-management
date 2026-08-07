@@ -111,6 +111,24 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, role: 'admin' },
   },
   {
+    path: '/admin/questions',
+    name: 'AdminQuestions',
+    component: () => import('@/views/admin/Questions.vue'),
+    meta: { requiresAuth: true, role: 'admin' },
+  },
+  {
+    path: '/admin/health',
+    name: 'AdminHealth',
+    component: () => import('@/views/admin/Health.vue'),
+    meta: { requiresAuth: true, role: 'admin' },
+  },
+  {
+    path: '/admin/config',
+    name: 'AdminConfig',
+    component: () => import('@/views/admin/Config.vue'),
+    meta: { requiresAuth: true, role: 'admin' },
+  },
+  {
     path: '/admin/llm',
     name: 'AdminLLM',
     component: () => import('@/views/admin/LLMUsage.vue'),
