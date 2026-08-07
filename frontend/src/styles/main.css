@@ -91,3 +91,36 @@ body {
   color: #666;
   font-size: 14px;
 }
+/* KaTeX Formula Styling Enhancements */
+.katex {
+  font-size: 1.08em;
+  line-height: 1.2;
+  text-indent: 0;
+  color: #1a1a1a;
+}
+
+.katex-display {
+  display: block;
+  margin: 0.8em 0;
+  padding: 10px 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3.5px solid var(--van-primary-color);
+  max-width: 100%;
+}
+
+.katex-display > .katex {
+  display: inline-block;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.question-content, .answer-content, .explanation-content {
+  line-height: 1.65;
+  font-size: 15px;
+  color: #2c3e50;
+  word-break: break-word;
+}
