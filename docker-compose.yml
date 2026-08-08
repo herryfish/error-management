@@ -13,11 +13,6 @@ services:
     networks:
       - frontend-net
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # Backend service
   backend:
@@ -57,11 +52,6 @@ services:
       - frontend-net
       - backend-net
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # MariaDB database
   mariadb:
@@ -102,11 +92,6 @@ services:
     networks:
       - frontend-net
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 volumes:
   mariadb-data:
