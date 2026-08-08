@@ -63,7 +63,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { questionService, type Question } from '@/services/questions'
 import { renderMath } from '@/utils/math'
-import api from '@/utils/api'
+import { redoService } from '@/services/redos'
 import { showToast } from 'vant'
 
 const route = useRoute()
@@ -85,11 +85,11 @@ const onSubmit = async () => {
   if (!question.value) return
   submitting.value = true
   try {
-    const response = await api.post('/redo', {
+    const resData = await redoService.create({
       questionId: question.value.id,
-      userAnswer: userAnswer.value,
+      answer: userAnswer.value,
     })
-    result.value = response.data
+    result.value = resData
     showToast('提交成功')
   } catch (e: any) {
     showToast(e.message || '提交失败')
