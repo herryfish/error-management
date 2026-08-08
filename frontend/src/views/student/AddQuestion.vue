@@ -97,7 +97,7 @@
             ref="fileInputRef"
             type="file"
             accept="image/*"
-            capture="environment"
+            
             style="display: none"
             @change="onFileChange"
           />
@@ -165,7 +165,7 @@ import { renderMath } from '@/utils/math'
 import { showToast, showConfirmDialog } from 'vant'
 
 const router = useRouter()
-const activeTab = ref(0)
+const activeTab = ref(1)
 const submitting = ref(false)
 const identifying = ref(false)
 const identifiedQuestion = ref<Question | null>(null)
