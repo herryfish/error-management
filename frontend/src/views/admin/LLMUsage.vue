@@ -151,9 +151,18 @@ const showRecentCalls = ref(false)
 
 const loadStats = async () => {
   try {
-    const response = await api.get('/llm/usage/summary')
-    if (response.data) {
-      stats.value = response.data
+    const response: any = await api.get('/llm/usage/summary')
+    console.log('[LLMUsage] response:', response)
+    const data = response?.data || response
+    if (data) {
+      stats.value = {
+        totalCalls: data.totalCalls || 0,
+        successfulCalls: data.successfulCalls || 0,
+        failedCalls: data.failedCalls || 0,
+        successRate: data.successRate || 0,
+        sceneSummary: data.sceneSummary || [],
+        modelSummary: data.modelSummary || []
+      }
     }
   } catch (error) {
     console.error('Failed to load LLM stats:', error)
@@ -163,8 +172,9 @@ const loadStats = async () => {
 const openRecentCalls = async () => {
   showRecentCalls.value = true
   try {
-    const response = await api.get('/llm/usage')
-    recentCalls.value = response.data || []
+    const response: any = await api.get('/llm/usage')
+    console.log('[LLMUsage] recentCalls response:', response)
+    recentCalls.value = response?.data || response || []
   } catch (error) {
     console.error('Failed to load recent LLM calls:', error)
   }
