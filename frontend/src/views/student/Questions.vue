@@ -18,13 +18,12 @@
       sticky
     >
       <van-tab title="全部">
-        <van-list
-          v-model:loading="loading"
-          :finished="finished"
-          @load="loadQuestions"
-        >
+        <div v-if="filteredQuestions.length === 0" class="empty-wrap">
+          <van-empty description="暂无错题记录" />
+        </div>
+        <van-list v-else>
           <div
-            v-for="question in questions"
+            v-for="question in filteredQuestions"
             :key="question.id"
             class="question-card"
             @click="viewQuestion(question.id)"
@@ -49,11 +48,61 @@
           </div>
         </van-list>
       </van-tab>
+
       <van-tab title="待复习">
-        <van-empty description="暂无待复习题目" />
+        <div v-if="pendingReviewQuestions.length === 0" class="empty-wrap">
+          <van-empty description="暂无待复习题目" />
+        </div>
+        <van-list v-else>
+          <div
+            v-for="question in pendingReviewQuestions"
+            :key="question.id"
+            class="question-card"
+            @click="viewQuestion(question.id)"
+          >
+            <div class="question-header">
+              <span class="question-title" v-html="renderMath(question.title)"></span>
+              <van-tag type="warning">待复习</van-tag>
+            </div>
+            <div
+              v-if="question.content"
+              class="question-content-preview"
+              v-html="renderMath(question.content)"
+            ></div>
+            <div class="question-footer">
+              <span class="question-date">{{ formatDate(question.createdAt) }}</span>
+              <span class="question-link">开始重做 <van-icon name="arrow" /></span>
+            </div>
+          </div>
+        </van-list>
       </van-tab>
+
       <van-tab title="已掌握">
-        <van-empty description="暂无已掌握题目" />
+        <div v-if="masteredQuestions.length === 0" class="empty-wrap">
+          <van-empty description="暂无已掌握题目" />
+        </div>
+        <van-list v-else>
+          <div
+            v-for="question in masteredQuestions"
+            :key="question.id"
+            class="question-card"
+            @click="viewQuestion(question.id)"
+          >
+            <div class="question-header">
+              <span class="question-title" v-html="renderMath(question.title)"></span>
+              <van-tag type="success">已掌握</van-tag>
+            </div>
+            <div
+              v-if="question.content"
+              class="question-content-preview"
+              v-html="renderMath(question.content)"
+            ></div>
+            <div class="question-footer">
+              <span class="question-date">{{ formatDate(question.createdAt) }}</span>
+              <span class="question-link">查看详情 <van-icon name="arrow" /></span>
+            </div>
+          </div>
+        </van-list>
       </van-tab>
     </van-tabs>
     
@@ -90,55 +139,78 @@
             </div>
           </template>
         </van-search>
-        <van-cell-group>
-          <van-cell
-            title="科目"
-            is-link
-            :value="searchSubject || '全部'"
-            @click="showSubjectPicker = true"
-          />
-          <van-cell
-            title="难度"
-            is-link
-            :value="searchDifficulty || '全部'"
-            @click="showDifficultyPicker = true"
-          />
-        </van-cell-group>
       </div>
     </van-popup>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { questionService, type Question } from '@/services/questions'
+import { masteryService, type Mastery } from '@/services/mastery'
 import { renderMath } from '@/utils/math'
 
 const router = useRouter()
 
 const activeTab = ref(0)
 const loading = ref(false)
-const finished = ref(false)
 const questions = ref<Question[]>([])
+const masteryRecords = ref<Mastery[]>([])
 const showSearch = ref(false)
 const searchKeyword = ref('')
-const searchSubject = ref('')
-const searchDifficulty = ref('')
-const showSubjectPicker = ref(false)
-const showDifficultyPicker = ref(false)
 
-const loadQuestions = async () => {
+const loadData = async () => {
+  loading.value = true
   try {
-    const data = await questionService.getAll()
-    questions.value = data
-    finished.value = true
+    const [qData, mData] = await Promise.all([
+      questionService.getAll(),
+      masteryService.getAll().catch(() => [])
+    ])
+    questions.value = qData
+    masteryRecords.value = mData
   } catch (error) {
-    console.error('Failed to load questions:', error)
+    console.error('Failed to load questions data:', error)
   } finally {
     loading.value = false
   }
 }
+
+// 结合 mastery 记录的匹配 Map
+const masteryMap = computed(() => {
+  const map = new Map<string, Mastery>()
+  masteryRecords.value.forEach(m => {
+    map.set(m.questionId, m)
+  })
+  return map
+})
+
+// 全部列表 (按搜索词过滤)
+const filteredQuestions = computed(() => {
+  if (!searchKeyword.value.trim()) return questions.value
+  const kw = searchKeyword.value.trim().toLowerCase()
+  return questions.value.filter(q => 
+    (q.title && q.title.toLowerCase().includes(kw)) ||
+    (q.content && q.content.toLowerCase().includes(kw))
+  )
+})
+
+// 待复习列表 (未掌握且在队列/待复习中)
+const pendingReviewQuestions = computed(() => {
+  return filteredQuestions.value.filter(q => {
+    const m = masteryMap.value.get(q.id)
+    if (!m) return true // 若未记录，默认计入待学习复习
+    return m.status !== 'mastered'
+  })
+})
+
+// 已掌握列表 (掌握状态为 mastered)
+const masteredQuestions = computed(() => {
+  return filteredQuestions.value.filter(q => {
+    const m = masteryMap.value.get(q.id)
+    return m && m.status === 'mastered'
+  })
+})
 
 const viewQuestion = (id: string) => {
   router.push(`/questions/${id}`)
@@ -177,7 +249,7 @@ const formatDate = (dateStr?: string) => {
 }
 
 onMounted(() => {
-  loadQuestions()
+  loadData()
 })
 </script>
 
@@ -186,6 +258,10 @@ onMounted(() => {
   padding-bottom: 80px;
   background-color: #f7f8fa;
   min-height: 100vh;
+}
+
+.empty-wrap {
+  padding: 40px 0;
 }
 
 .question-card {
