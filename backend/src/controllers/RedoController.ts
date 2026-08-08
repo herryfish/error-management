@@ -77,12 +77,13 @@ export class RedoController {
 
   createRedo = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { questionId, answer } = req.body
+      const { questionId, answer, userAnswer } = req.body
+      const finalAnswer = answer || userAnswer || ""
       const userId = (req as any).user.id
 
       const redo = this.redoRepository.create({
         type: RedoType.ONLINE,
-        answer,
+        answer: finalAnswer,
         questionId,
         studentId: userId,
       })
