@@ -122,6 +122,27 @@ export class QuestionController {
         }
       }
 
+      
+      // 错题防重排查：根据 studentId + subject + title/content 校验
+      const cleanContent = (content || title || '').replace(/[^一-龥a-zA-Z0-9]/g, '');
+      if (cleanContent) {
+        const existing = await this.questionRepository.find({ where: { studentId: userId, subject } });
+        const duplicate = existing.find(q => {
+          const targetClean = ((q.content || '') + (q.title || '')).replace(/[^一-龥a-zA-Z0-9]/g, '');
+          return targetClean.length > 5 && (targetClean === cleanContent || targetClean.includes(cleanContent) || cleanContent.includes(targetClean));
+        });
+
+        if (duplicate && !(req.body.forceSave === true || req.body.forceSave === 'true')) {
+          res.status(409).json({
+            status: 'error',
+            code: 'DUPLICATE_QUESTION',
+            message: '该题目已存在于你的错题本中',
+            data: { existingQuestionId: duplicate.id, existingTitle: duplicate.title }
+          });
+          return;
+        }
+      }
+
       const question = this.questionRepository.create({
         title,
         content,

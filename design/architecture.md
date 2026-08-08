@@ -714,3 +714,17 @@ LLM_FALLBACK_TIMEOUT_MS=30000
 | **在线重做** | `student/Redo.vue` | 重做题目标题、题干、正确答案与反馈解析 |
 | **家长监控端** | `parent/Questions.vue` | 孩子错题列表标题、题干预览 |
 | **管理员后台** | `admin/Questions.vue` | 抽查错题列表标题、题干与详情弹窗 |
+
+## 9. 错题查重与防重机制 (Duplicate Prevention Specification)
+
+为避免学生重复录入相同题目导致错题本冗余与重复复习，系统实现了多级防重策略。
+
+### 9.1 防重校验算法与逻辑
+
+1. **规范化文本指纹提取**：
+   - 系统将录入的 `title`（标题）与 `content`（题干内容）剔除标点符号、空格与换行后提取规范化文本特征值。
+2. **唯一性排查**：
+   - 在错题创建 (`POST /api/questions`) 阶段，系统自动检索同一学生 (`studentId`) 在同一科目 (`subject`) 下是否存在指纹一致的错题。
+3. **冲突响应处理**：
+   - 当检测到完全重复的题目时，接口拒绝重复创建并返回 HTTP Status `409 Conflict`，响应中包含已有错题的 `existingQuestionId`。
+   - 用户可根据前端弹窗提醒选择直接查看已录入的错题。

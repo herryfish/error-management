@@ -162,7 +162,7 @@ import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { questionService, type Question } from '@/services/questions'
 import { renderMath } from '@/utils/math'
-import { showToast } from 'vant'
+import { showToast, showConfirmDialog } from 'vant'
 
 const router = useRouter()
 const activeTab = ref(0)
@@ -207,20 +207,43 @@ const onFileChange = (event: Event) => {
   }
 }
 
-const onSubmit = async () => {
+const submitForm = async (force: boolean = false) => {
   submitting.value = true
   try {
     await questionService.create({
       ...form.value,
       knowledgePoints: knowledgePoints.value,
+      ...(force ? { forceSave: true } : {})
     }, selectedFile.value || undefined)
     showToast('录入成功')
     router.back()
   } catch (error: any) {
-    showToast(error.message || '录入失败')
+    if (error.response?.status === 409 || error.status === 409 || error.code === 'DUPLICATE_QUESTION') {
+      const data = error.response?.data?.data || error.data || {}
+      showConfirmDialog({
+        title: '检测到重复题目',
+        message: '该题目已在你的错题本中存在，是否自动跳转查看？',
+        confirmButtonText: '查看原错题',
+        cancelButtonText: '仍要保存',
+      }).then(() => {
+        if (data.existingQuestionId) {
+          router.push(`/student/questions/${data.existingQuestionId}`)
+        } else {
+          router.push('/student/questions')
+        }
+      }).catch(() => {
+        submitForm(true)
+      })
+    } else {
+      showToast(error.message || '录入失败')
+    }
   } finally {
     submitting.value = false
   }
+}
+
+const onSubmit = async () => {
+  await submitForm(false)
 }
 
 const identifyQuestion = async () => {
