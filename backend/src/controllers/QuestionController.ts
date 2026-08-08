@@ -16,6 +16,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { Question, Subject, QuestionType } from '../models/Question'
+import { Mastery, MasteryStatus } from '../models/Mastery'
 import { LLMService } from '../services/LLMService'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -25,6 +26,22 @@ import { v4 as uuidv4 } from 'uuid'
  * 提供错题相关的API接口
  */
 export class QuestionController {
+  private async ensureMasteryRecord(questionId: string, studentId: string) {
+    const masteryRepository = AppDataSource.getRepository(Mastery)
+    const existing = await masteryRepository.findOne({ where: { questionId } })
+    if (!existing) {
+      const mastery = masteryRepository.create({
+        questionId,
+        studentId,
+        status: MasteryStatus.NEW,
+        correctCount: 0,
+        incorrectCount: 0,
+        intervalLevel: 0,
+      })
+      await masteryRepository.save(mastery)
+    }
+  }
+
   private questionRepository = AppDataSource.getRepository(Question)
   private llmService = new LLMService()
 
@@ -120,6 +137,7 @@ export class QuestionController {
       })
 
       await this.questionRepository.save(question)
+      await this.ensureMasteryRecord((question as any).id, userId)
 
       res.status(201).json({
         status: 'success',
@@ -225,6 +243,7 @@ export class QuestionController {
       } as any)
 
       await this.questionRepository.save(question)
+      await this.ensureMasteryRecord((question as any).id, userId)
 
       res.status(201).json({
         status: 'success',
