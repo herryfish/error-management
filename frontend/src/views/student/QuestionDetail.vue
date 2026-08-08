@@ -12,9 +12,12 @@
     >
       <van-cell-group inset>
         <van-cell
-          :title="question.title"
           :label="`${getSubjectText(question.subject)} · ${getTypeText(question.type)} · 难度${question.difficulty}`"
-        />
+        >
+          <template #title>
+            <div class="question-title-rendered" v-html="renderMath(question.title)"></div>
+          </template>
+        </van-cell>
       </van-cell-group>
       
       <van-cell-group
@@ -140,6 +143,13 @@ onMounted(() => {
 
 .content {
   padding: 16px;
+}
+
+.question-title-rendered {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323233;
+  line-height: 1.4;
 }
 
 .question-content,

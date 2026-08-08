@@ -46,6 +46,7 @@ export interface Question {
   /** 识别置信度 */
   confidence?: number
   /** 学生ID */
+  masteryLevel?: number
   studentId: string
   /** 创建时间 */
   createdAt: string

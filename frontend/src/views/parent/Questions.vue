@@ -16,20 +16,30 @@
           :finished="finished"
           @load="loadQuestions"
         >
-          <van-cell
+          <div
             v-for="question in questions"
             :key="question.id"
-            :title="question.title"
-            :label="question.subject"
-            is-link
+            class="parent-question-card"
             @click="viewQuestion(question.id)"
           >
-            <template #right-icon>
+            <div class="card-header">
+              <span class="card-title" v-html="renderMath(question.title)"></span>
               <van-tag :type="getSubjectType(question.subject)">
                 {{ getSubjectText(question.subject) }}
               </van-tag>
-            </template>
-          </van-cell>
+            </div>
+            
+            <div
+              v-if="question.content"
+              class="card-content-preview"
+              v-html="renderMath(question.content)"
+            ></div>
+            
+            <div class="card-footer">
+              <span>点击查看详情</span>
+              <van-icon name="arrow" />
+            </div>
+          </div>
         </van-list>
       </van-tab>
       <van-tab title="待复习">
@@ -46,6 +56,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { questionService, type Question } from '@/services/questions'
+import { renderMath } from '@/utils/math'
 
 const router = useRouter()
 const activeTab = ref(0)
@@ -94,6 +105,52 @@ onMounted(() => {
 
 <style scoped>
 .parent-questions-page {
-  padding-bottom: 80px;
+  padding: 12px 16px 80px;
+  background-color: #f7f8fa;
+  min-height: 100vh;
+}
+
+.parent-question-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #323233;
+}
+
+.card-content-preview {
+  font-size: 14px;
+  color: #646566;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  max-height: 4.5em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #969799;
+  border-top: 1px solid #f2f3f5;
+  padding-top: 8px;
 }
 </style>

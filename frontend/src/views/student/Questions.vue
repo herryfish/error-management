@@ -30,7 +30,7 @@
             @click="viewQuestion(question.id)"
           >
             <div class="question-header">
-              <span class="question-title">{{ question.title }}</span>
+              <span class="question-title" v-html="renderMath(question.title)"></span>
               <van-tag :type="getSubjectType(question.subject)">
                 {{ getSubjectText(question.subject) }}
               </van-tag>

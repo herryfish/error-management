@@ -116,6 +116,7 @@
             type="primary"
             block
             :loading="identifying"
+            style="margin-top: 16px;"
             @click="identifyQuestion"
           >
             AI识别
@@ -124,15 +125,30 @@
           <div v-if="identifiedQuestion" class="identified-result">
             <van-cell-group inset>
               <van-cell
-                title="识别结果"
+                title="识别可信度"
                 :value="`${((identifiedQuestion.confidence || 0) * 100).toFixed(0)}%`"
               />
-              <van-field v-model="identifiedQuestion.title" label="标题" />
-              <van-field v-model="identifiedQuestion.content" type="textarea" rows="2" label="内容" />
-              <van-field v-model="identifiedQuestion.answer" type="textarea" rows="2" label="答案" />
+              <van-field v-model="identifiedQuestion.title" label="标题" placeholder="校验修改标题..." />
+              <van-field v-model="identifiedQuestion.content" type="textarea" rows="3" label="内容" placeholder="校验修改题目内容..." />
+              <van-field v-model="identifiedQuestion.answer" type="textarea" rows="2" label="答案" placeholder="校验修改答案..." />
             </van-cell-group>
-            <button type="button" style="width:100%;padding:12px;background:#1989fa;color:#fff;border:none;border-radius:20px;font-size:16px;margin-top:12px;" @click="onSaveClick">
-              保存
+
+            <!-- 公式实时渲染预览区 -->
+            <div class="math-live-preview" style="margin-top: 16px; text-align: left;">
+              <van-cell-group inset>
+                <van-cell title="📐 实时公式渲染预览 (KaTeX)">
+                  <template #label>
+                    <div class="preview-box">
+                      <div class="preview-title" v-html="renderMath(identifiedQuestion.title || '（标题暂无）')"></div>
+                      <div class="preview-content" v-html="renderMath(identifiedQuestion.content || '（内容暂无）')"></div>
+                    </div>
+                  </template>
+                </van-cell>
+              </van-cell-group>
+            </div>
+
+            <button type="button" class="save-btn" @click="onSaveClick">
+              确认并保存修改
             </button>
           </div>
         </div>
@@ -145,6 +161,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { questionService, type Question } from '@/services/questions'
+import { renderMath } from '@/utils/math'
 import { showToast } from 'vant'
 
 const router = useRouter()
@@ -182,10 +199,8 @@ const triggerFileInput = () => {
 
 const onFileChange = (event: Event) => {
   const input = event.target as HTMLInputElement
-  console.log('[onFileChange] files:', input.files)
   if (input.files && input.files.length > 0) {
     const file = input.files[0]
-    console.log('[onFileChange] file:', file.name, file.size, file.type, file instanceof File)
     selectedFile.value = file
     previewUrl.value = URL.createObjectURL(file)
     showToast('图片已选择')
@@ -209,8 +224,6 @@ const onSubmit = async () => {
 }
 
 const identifyQuestion = async () => {
-  console.log('[identifyQuestion] selectedFile:', selectedFile.value)
-  
   if (!selectedFile.value) {
     showToast('请先上传图片')
     return
@@ -219,7 +232,6 @@ const identifyQuestion = async () => {
   identifying.value = true
   try {
     const result = await questionService.identify(selectedFile.value)
-    console.log('[identify] result:', JSON.stringify(result).substring(0, 200))
     identifiedQuestion.value = result.data?.question || result.question || null
     showToast('识别成功')
   } catch (error: any) {
@@ -230,8 +242,6 @@ const identifyQuestion = async () => {
 }
 
 const onSaveClick = () => {
-  console.log('[onSaveClick] triggered')
-  console.log('[onSaveClick] identifiedQuestion:', identifiedQuestion.value)
   saveIdentifiedQuestion()
 }
 
@@ -275,9 +285,42 @@ const saveIdentifiedQuestion = async () => {
   border: 2px dashed #ddd;
   border-radius: 8px;
   margin: 0 auto;
+  cursor: pointer;
 }
 
 .identified-result {
   margin-top: 16px;
+}
+
+.preview-box {
+  background: #f8f9fa;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: #323233;
+  margin-top: 6px;
+}
+
+.preview-title {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.preview-content {
+  font-size: 14px;
+  color: #646566;
+  line-height: 1.5;
+}
+
+.save-btn {
+  width: 100%;
+  padding: 12px;
+  background: #1989fa;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-size: 16px;
+  margin-top: 16px;
+  cursor: pointer;
 }
 </style>
