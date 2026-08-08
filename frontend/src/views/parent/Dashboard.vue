@@ -12,62 +12,58 @@
         />
       </template>
     </van-nav-bar>
-    
+
+    <div class="section-title">学习概况</div>
     <van-cell-group inset>
       <van-cell
         title="周报"
         is-link
-        value="查看"
+        value="查看周报"
         @click="$router.push('/reports/weekly')"
       />
       <van-cell
         title="掌握率"
         is-link
         :value="`${stats.masteryRate}%`"
-        @click="$router.push('/mastery')"
+        @click="$router.push('/parent/questions')"
       />
       <van-cell
         title="本周重做"
         is-link
         :value="`${stats.totalRedos}次`"
-        @click="$router.push('/records')"
-      />
-    </van-cell-group>
-    
-    <van-cell-group
-      inset
-      style="margin-top: 16px"
-    >
-      <van-cell
-        title="错题明细"
-        is-link
-        @click="$router.push('/questions')"
-      />
-      <van-cell
-        title="学习记录"
-        is-link
-        @click="$router.push('/records')"
-      />
-      <van-cell
-        title="统计信息"
-        is-link
         @click="$router.push('/reports/stats')"
       />
     </van-cell-group>
     
-    <van-cell-group
-      inset
-      style="margin-top: 16px"
-    >
+    <div class="section-title">错题与统计</div>
+    <van-cell-group inset>
       <van-cell
-        title="孩子信息"
+        title="孩子错题明细"
         is-link
-        @click="$router.push('/child')"
+        icon="orders-o"
+        @click="$router.push('/parent/questions')"
       />
       <van-cell
-        title="绑定管理"
+        title="统计信息"
         is-link
-        @click="$router.push('/bind')"
+        icon="chart-trending-o"
+        @click="$router.push('/reports/stats')"
+      />
+    </van-cell-group>
+
+    <div class="section-title">账号与设置</div>
+    <van-cell-group inset>
+      <van-cell
+        title="个人账号"
+        is-link
+        icon="user-o"
+        @click="$router.push('/account')"
+      />
+      <van-cell
+        title="系统设置"
+        is-link
+        icon="setting-o"
+        @click="$router.push('/settings')"
       />
     </van-cell-group>
   </div>
@@ -97,7 +93,16 @@ onMounted(async () => {
 
 <style scoped>
 .parent-dashboard {
-  padding: 16px;
+  padding: 12px;
   padding-bottom: 80px;
+  background-color: #f7f8fa;
+  min-height: 100vh;
+}
+
+.section-title {
+  font-size: 14px;
+  color: #969799;
+  margin: 16px 12px 8px;
+  font-weight: 500;
 }
 </style>

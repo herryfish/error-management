@@ -1,23 +1,19 @@
 <template>
   <div class="parent-questions-page">
     <van-nav-bar
-      title="孩子错题"
+      title="孩子错题明细"
       left-arrow
       @click-left="$router.back()"
     />
-    
+
     <van-tabs
       v-model:active="activeTab"
       sticky
     >
       <van-tab title="全部">
-        <van-list
-          v-model:loading="loading"
-          :finished="finished"
-          @load="loadQuestions"
-        >
+        <van-list v-if="filteredQuestions.length > 0">
           <div
-            v-for="question in questions"
+            v-for="question in filteredQuestions"
             :key="question.id"
             class="parent-question-card"
             @click="viewQuestion(question.id)"
@@ -41,19 +37,74 @@
             </div>
           </div>
         </van-list>
+        <van-empty v-else description="暂无错题记录" />
       </van-tab>
+
       <van-tab title="待复习">
-        <van-empty description="暂无待复习题目" />
+        <van-list v-if="filteredQuestions.length > 0">
+          <div
+            v-for="question in filteredQuestions"
+            :key="question.id"
+            class="parent-question-card"
+            @click="viewQuestion(question.id)"
+          >
+            <div class="card-header">
+              <span class="card-title" v-html="renderMath(question.title)"></span>
+              <van-tag :type="getSubjectType(question.subject)">
+                {{ getSubjectText(question.subject) }}
+              </van-tag>
+            </div>
+            
+            <div
+              v-if="question.content"
+              class="card-content-preview"
+              v-html="renderMath(question.content)"
+            ></div>
+            
+            <div class="card-footer">
+              <span>点击查看详情</span>
+              <van-icon name="arrow" />
+            </div>
+          </div>
+        </van-list>
+        <van-empty v-else description="暂无待复习题目" />
       </van-tab>
+
       <van-tab title="已掌握">
-        <van-empty description="暂无已掌握题目" />
+        <van-list v-if="filteredQuestions.length > 0">
+          <div
+            v-for="question in filteredQuestions"
+            :key="question.id"
+            class="parent-question-card"
+            @click="viewQuestion(question.id)"
+          >
+            <div class="card-header">
+              <span class="card-title" v-html="renderMath(question.title)"></span>
+              <van-tag :type="getSubjectType(question.subject)">
+                {{ getSubjectText(question.subject) }}
+              </van-tag>
+            </div>
+            
+            <div
+              v-if="question.content"
+              class="card-content-preview"
+              v-html="renderMath(question.content)"
+            ></div>
+            
+            <div class="card-footer">
+              <span>点击查看详情</span>
+              <van-icon name="arrow" />
+            </div>
+          </div>
+        </van-list>
+        <van-empty v-else description="暂无已掌握题目" />
       </van-tab>
     </van-tabs>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { questionService, type Question } from '@/services/questions'
 import { renderMath } from '@/utils/math'
@@ -61,14 +112,24 @@ import { renderMath } from '@/utils/math'
 const router = useRouter()
 const activeTab = ref(0)
 const loading = ref(false)
-const finished = ref(false)
 const questions = ref<Question[]>([])
 
+const filteredQuestions = computed(() => {
+  if (activeTab.value === 0) return questions.value
+  if (activeTab.value === 1) {
+    return questions.value.filter(q => (q as any).masteryRecords?.[0]?.status !== 'mastered')
+  }
+  if (activeTab.value === 2) {
+    return questions.value.filter(q => (q as any).masteryRecords?.[0]?.status === 'mastered')
+  }
+  return questions.value
+})
+
 const loadQuestions = async () => {
+  loading.value = true
   try {
     const data = await questionService.getAll()
     questions.value = data
-    finished.value = true
   } catch (error) {
     console.error('Failed to load questions:', error)
   } finally {
