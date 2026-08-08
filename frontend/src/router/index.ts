@@ -40,7 +40,7 @@ const routes: RouteRecordRaw[] = [
     path: '/questions/:id',
     name: 'QuestionDetail',
     component: () => import('@/views/student/QuestionDetail.vue'),
-    meta: { requiresAuth: true, role: 'student' },
+    meta: { requiresAuth: true },
   },
   {
     path: '/redo/add/:questionId',
