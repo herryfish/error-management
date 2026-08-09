@@ -393,3 +393,18 @@ volumes:
 - `.env.example`：环境变量示例
 - `config.example.json`：配置文件示例
 - `docker-compose.example.yml`：Docker Compose示例
+### 17. 问答题与复杂解题的大模型智能语义判题规范 (LLM Answer Evaluation Spec)
+
+针对问答题/解答题 (`type === 'answer'`) 或难以通过纯字符串判定的题目，系统引入大模型进行智能语义比对与判题。
+
+#### 流程与判定规则
+1. **触发场景 (`scene: 'grading'`)**：
+   - 当题目类型为 `answer`，或者无法进行简单的字符串比对时，后端向配置的大模型发起文本评判请求。
+2. ** prompt 提示词规范**：
+   - 包含题干内容 (`questionContent`)、参考答案/推导步骤 (`expectedAnswer`) 及学生提交的文字解答 (`userAnswer`)。
+   - 要求大模型判定学生回答是否在数学/逻辑上与参考答案**语义等价**（允许不同的表示形式如 `x=-2 or x=-3` 与 `x1=-2, x2=-3`）。
+3. **返回数据格式**：
+   - 大模型返回 JSON 数据，包含：`isCorrect` (boolean)、`score` (0-100)、`feedback` (简短批改与点评信息)。
+4. **降级与防线 (Fallback & Audit Log)**：
+   - 若大模型调用失败或配置未开启，降级为预设判题规则（提示待人工审核/改判）。
+   - 判题结果写入 `llm_usage` 监控表，便于管理员审计。

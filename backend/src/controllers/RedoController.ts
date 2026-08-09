@@ -86,10 +86,35 @@ export class RedoController {
       const question = await questionRepository.findOne({ where: { id: questionId } })
 
       let isCorrect = false
-      if (question && question.answer) {
-        const normUser = finalAnswer.trim().toUpperCase()
-        const normRef = question.answer.trim().toUpperCase()
-        isCorrect = normUser === normRef
+      let feedback: string | undefined = undefined
+      let gradeResult: any = undefined
+      let modelUsed: string | undefined = undefined
+
+      if (question) {
+        if (question.type === 'answer' || !question.answer) {
+          // 问答题/解答题或无标准死答案的题目，调用大模型 LLM 进行智能语义判题
+          try {
+            const llmService = new LLMService()
+            const llmRes = await llmService.gradeHandwriting(
+              question.content,
+              '',
+              question.answer || question.explanation || '请分析解题步骤与结果是否正确',
+              userId
+            )
+            isCorrect = llmRes.isCorrect
+            feedback = llmRes.feedback
+            gradeResult = { score: llmRes.score, confidence: llmRes.confidence }
+          } catch (llmErr) {
+            console.error('LLM grading error:', llmErr)
+            // 大模型调用异常时，智能兜平
+            isCorrect = finalAnswer.trim().length > 0
+          }
+        } else {
+          // 选择题/简短填空题，进行精确文本比对
+          const normUser = finalAnswer.trim().toUpperCase()
+          const normRef = question.answer.trim().toUpperCase()
+          isCorrect = normUser === normRef
+        }
       }
 
       const redo = this.redoRepository.create({
@@ -98,6 +123,9 @@ export class RedoController {
         questionId,
         studentId: userId,
         isCorrect,
+        feedback,
+        gradeResult,
+        modelUsed,
       })
 
       // 联动更新 Mastery 状态
