@@ -14,6 +14,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { LLMUsage } from '../models/LLMUsage'
+import { User } from '../models/User'
 
 /**
  * LLM控制器类
@@ -22,6 +23,7 @@ import { LLMUsage } from '../models/LLMUsage'
  */
 export class LLMController {
   private llmUsageRepository = AppDataSource.getRepository(LLMUsage)
+  private userRepository = AppDataSource.getRepository(User)
 
   /**
    * 获取LLM用量
@@ -63,6 +65,69 @@ export class LLMController {
       res.json({
         status: 'success',
         data: usage,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+
+  getUsageByUserStats = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const stats = await this.llmUsageRepository
+        .createQueryBuilder('usage')
+        .select('usage.userId', 'userId')
+        .addSelect('COUNT(*)', 'count')
+        .addSelect('SUM(usage.tokensTotal)', 'tokensTotal')
+        .addSelect('SUM(usage.tokensInput)', 'tokensInput')
+        .addSelect('SUM(usage.tokensOutput)', 'tokensOutput')
+        .groupBy('usage.userId')
+        .getRawMany()
+
+      const result = await Promise.all(
+        stats.map(async (s) => {
+          const user = s.userId ? await this.userRepository.findOne({ where: { id: s.userId } }) : null
+          return {
+            userId: s.userId,
+            username: user ? user.username : '匿名/系统',
+            role: user ? user.role : 'system',
+            count: Number(s.count || 0),
+            tokensInput: Number(s.tokensInput || 0),
+            tokensOutput: Number(s.tokensOutput || 0),
+            tokensTotal: Number(s.tokensTotal || 0),
+          }
+        })
+      )
+
+      res.json({
+        status: 'success',
+        data: result,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  getUsageByDateStats = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const stats = await this.llmUsageRepository
+        .createQueryBuilder('usage')
+        .select('DATE(usage.createdAt)', 'date')
+        .addSelect('COUNT(*)', 'count')
+        .addSelect('SUM(usage.tokensTotal)', 'tokensTotal')
+        .groupBy('DATE(usage.createdAt)')
+        .orderBy('date', 'ASC')
+        .getRawMany()
+
+      const formatted = stats.map((s) => ({
+        date: s.date,
+        count: Number(s.count || 0),
+        tokensTotal: Number(s.tokensTotal || 0),
+      }))
+
+      res.json({
+        status: 'success',
+        data: formatted,
       })
     } catch (error) {
       next(error)

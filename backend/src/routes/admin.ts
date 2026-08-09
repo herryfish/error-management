@@ -12,6 +12,7 @@ router.use(authorize('admin'))
 router.get('/users', adminController.getAllUsers)
 router.get('/users/:id', adminController.getUserById)
 router.put('/users/:id', adminController.updateUser)
+router.put('/users/:id/password', adminController.resetUserPassword)
 router.delete('/users/:id', adminController.deleteUser)
 
 router.get('/questions', adminController.getAllQuestions)

@@ -47,3 +47,25 @@
 
 ---
 
+
+---
+
+## 4. 2026-08-09 功能扩展 Spec
+
+### 4.1 管理员重置与修改用户密码 Spec
+- **端点**：`PUT /api/admin/users/:id/password`
+- **权限**：仅限 `admin` 角色访问。
+- **请求体**：
+  ```json
+  { "password": "new_password_string" }
+  ```
+- **安全与业务逻辑**：
+  - 校验密码长度（不少于 6 位）。
+  - 使用 `bcryptjs` （salt rounds 10）进行强哈希存储。
+  - 重置成功后记录审计日志，防范越权破坏。
+
+### 4.2 LLM 用量多维统计 Spec (按用户 / 按日期)
+- **按用户维度统计 API**：`GET /api/llm/usage/by-user`
+  - 返回各用户 (username / role) 的 LLM 调用次数、Token 输入/输出与总 Token 消耗透视表。
+- **按日期维度统计 API**：`GET /api/llm/usage/by-date`
+  - 返回近 7 天 / 近 30 天每日的调用次数与 Token 消耗趋势数据。

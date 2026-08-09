@@ -15,6 +15,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { User } from '../models/User'
+import bcrypt from 'bcryptjs'
 import { Question } from '../models/Question'
 import { RedoRecord } from '../models/RedoRecord'
 import { Mastery } from '../models/Mastery'
@@ -77,6 +78,40 @@ export class AdminController {
       res.json({
         status: 'success',
         data: user,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+
+  resetUserPassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params
+      const { password } = req.body
+
+      if (!password || password.length < 6) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Password must be at least 6 characters',
+        })
+      }
+
+      const user = await this.userRepository.findOne({ where: { id } })
+      if (!user) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'User not found',
+        })
+      }
+
+      const salt = await bcrypt.genSalt(10)
+      user.password = await bcrypt.hash(password, salt)
+      await this.userRepository.save(user)
+
+      res.json({
+        status: 'success',
+        message: 'Password updated successfully',
       })
     } catch (error) {
       next(error)

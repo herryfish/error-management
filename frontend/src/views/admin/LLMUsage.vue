@@ -1,130 +1,107 @@
 <template>
   <div class="admin-llm-page">
     <van-nav-bar
-      title="LLM 用量监控"
+      title="LLM用量监控"
       left-arrow
       @click-left="$router.back()"
     />
     
-    <van-cell-group inset style="margin-top: 16px;">
-      <van-cell
-        title="总调用次数"
-        :value="`${stats.totalCalls} 次`"
-      />
-      <van-cell
-        title="成功次数"
-        :value="`${stats.successfulCalls} 次`"
-      />
-      <van-cell
-        title="失败次数"
-        :value="`${stats.failedCalls} 次`"
-      />
-      <van-cell
-        title="总体成功率"
-        :value="`${stats.successRate}%`"
-      />
-    </van-cell-group>
-    
-    <van-cell-group
-      inset
-      style="margin-top: 16px"
-    >
-      <van-cell
-        title="按场景统计"
-        is-link
-        value="查看场景分布"
-        @click="showSceneStats = true"
-      />
-      <van-cell
-        title="按模型统计"
-        is-link
-        value="查看模型分布"
-        @click="showModelStats = true"
-      />
-      <van-cell
-        title="最近调用记录"
-        is-link
-        value="查看最近 100 条"
-        @click="openRecentCalls"
-      />
-    </van-cell-group>
+    <div class="stats-panel">
+      <!-- 总体统计 -->
+      <van-cell-group title="调用概览" inset>
+        <van-cell title="总调用次数" :value="stats.totalCalls" />
+        <van-cell title="成功次数" :value="stats.successCalls" class="success-text" />
+        <van-cell title="失败次数" :value="stats.totalCalls - stats.successCalls" class="fail-text" />
+        <van-cell title="总体成功率" :value="`${stats.successRate.toFixed(1)}%`" />
+      </van-cell-group>
+      
+      <!-- 多维统计弹窗入口按键组 -->
+      <van-cell-group title="多维统计与日志" inset style="margin-top: 12px;">
+        <van-cell title="按用户维度统计 Token 用量" is-link @click="openUserStats" />
+        <van-cell title="按日期维度统计 Token 用量" is-link @click="openDateStats" />
+        <van-cell title="按场景统计列表" is-link @click="openSceneStats" />
+        <van-cell title="按模型统计列表" is-link @click="openModelStats" />
+        <van-cell title="最近调用日志明细" is-link @click="openRecentCalls" />
+      </van-cell-group>
+    </div>
 
-    <!-- 按场景统计弹窗 -->
-    <van-popup
-      v-model:show="showSceneStats"
-      position="bottom"
-      round
-      :style="{ height: '70%' }"
-    >
-      <div class="stats-panel">
-        <van-nav-bar
-          title="按场景统计"
-          left-text="关闭"
-          @click-left="showSceneStats = false"
-        />
-        <van-cell-group v-if="stats.sceneSummary && stats.sceneSummary.length > 0">
+    <!-- 按用户维度统计 Token 弹窗 -->
+    <van-popup v-model:show="showUserStats" position="bottom" :style="{ height: '70%' }" round closeable>
+      <div style="padding: 16px;">
+        <h3>按用户统计 Token 用量</h3>
+        <van-cell-group inset style="margin-top: 12px;">
           <van-cell
-            v-for="item in stats.sceneSummary"
-            :key="item.scene"
-            :title="getSceneText(item.scene)"
-            :label="`Token: ${item.totalTokens || 0} | 成本: $${Number(item.totalCost || 0).toFixed(4)}`"
-            :value="`${item.count} 次`"
+            v-for="u in userStatsList"
+            :key="u.userId || 'system'"
+            :title="`${u.username} (${u.role})`"
+            :label="`调用 ${u.count} 次 | 输入: ${u.tokensInput} / 输出: ${u.tokensOutput}`"
+            :value="`${u.tokensTotal} Tokens`"
           />
         </van-cell-group>
-        <van-empty v-else description="暂无场景统计数据" />
+      </div>
+    </van-popup>
+
+    <!-- 按日期维度统计 Token 弹窗 -->
+    <van-popup v-model:show="showDateStats" position="bottom" :style="{ height: '70%' }" round closeable>
+      <div style="padding: 16px;">
+        <h3>按日期统计 Token 趋势</h3>
+        <van-cell-group inset style="margin-top: 12px;">
+          <van-cell
+            v-for="d in dateStatsList"
+            :key="d.date"
+            :title="formatDate(d.date)"
+            :label="`当日调用 ${d.count} 次`"
+            :value="`${d.tokensTotal} Tokens`"
+          />
+        </van-cell-group>
+      </div>
+    </van-popup>
+
+    <!-- 按场景统计弹窗 -->
+    <van-popup v-model:show="showSceneStats" position="bottom" :style="{ height: '60%' }" round closeable>
+      <div style="padding: 16px;">
+        <h3>按场景统计列表</h3>
+        <van-cell-group inset style="margin-top: 12px;">
+          <van-cell
+            v-for="s in sceneStatsList"
+            :key="s.scene"
+            :title="getSceneName(s.scene)"
+            :label="`调用 ${s.count} 次`"
+            :value="`${s.totalTokens} Tokens`"
+          />
+        </van-cell-group>
       </div>
     </van-popup>
 
     <!-- 按模型统计弹窗 -->
-    <van-popup
-      v-model:show="showModelStats"
-      position="bottom"
-      round
-      :style="{ height: '70%' }"
-    >
-      <div class="stats-panel">
-        <van-nav-bar
-          title="按模型统计"
-          left-text="关闭"
-          @click-left="showModelStats = false"
-        />
-        <van-cell-group v-if="stats.modelSummary && stats.modelSummary.length > 0">
+    <van-popup v-model:show="showModelStats" position="bottom" :style="{ height: '60%' }" round closeable>
+      <div style="padding: 16px;">
+        <h3>按模型统计列表</h3>
+        <van-cell-group inset style="margin-top: 12px;">
           <van-cell
-            v-for="item in stats.modelSummary"
-            :key="item.model + (item.provider || '')"
-            :title="`${item.provider || 'default'} / ${item.model}`"
-            :label="`降级模式: ${item.isFallback ? '是' : '否'} | Token: ${item.totalTokens || 0}`"
-            :value="`${item.count} 次`"
+            v-for="m in modelStatsList"
+            :key="m.model"
+            :title="m.model"
+            :label="`调用 ${m.count} 次`"
+            :value="`${m.totalTokens} Tokens`"
           />
         </van-cell-group>
-        <van-empty v-else description="暂无模型统计数据" />
       </div>
     </van-popup>
 
     <!-- 最近调用记录弹窗 -->
-    <van-popup
-      v-model:show="showRecentCalls"
-      position="bottom"
-      round
-      :style="{ height: '80%' }"
-    >
-      <div class="stats-panel">
-        <van-nav-bar
-          title="最近调用记录"
-          left-text="关闭"
-          @click-left="showRecentCalls = false"
-        />
-        <van-list v-if="recentCalls && recentCalls.length > 0">
+    <van-popup v-model:show="showRecentCalls" position="bottom" :style="{ height: '80%' }" round closeable>
+      <div style="padding: 16px;">
+        <h3>最近调用记录</h3>
+        <van-list style="margin-top: 12px;">
           <van-cell
-            v-for="log in recentCalls"
-            :key="log.id"
-            :title="`[${getSceneText(log.scene)}] ${log.model}`"
-            :label="`耗时: ${log.latencyMs}ms | Token: ${log.tokensTotal || 0} | 时间: ${formatDate(log.createdAt)}`"
-            :value="log.success ? '成功' : '失败'"
-            :value-class="log.success ? 'success-text' : 'fail-text'"
+            v-for="call in recentCalls"
+            :key="call.id"
+            :title="getSceneName(call.scene)"
+            :label="`${call.model} | 耗时: ${call.latencyMs || 0}ms | ${formatDate(call.createdAt)}`"
+            :value="`${call.tokensTotal || 0} Tokens`"
           />
         </van-list>
-        <van-empty v-else description="暂无调用记录" />
       </div>
     </van-popup>
   </div>
@@ -136,64 +113,124 @@ import api from '@/utils/api'
 
 const stats = ref({
   totalCalls: 0,
-  successfulCalls: 0,
-  failedCalls: 0,
-  successRate: 0,
-  sceneSummary: [] as any[],
-  modelSummary: [] as any[],
+  successCalls: 0,
+  successRate: 100,
 })
 
-const recentCalls = ref<any[]>([])
+const showUserStats = ref(false)
+const userStatsList = ref<any[]>([])
+
+const showDateStats = ref(false)
+const dateStatsList = ref<any[]>([])
 
 const showSceneStats = ref(false)
+const sceneStatsList = ref<any[]>([])
+
 const showModelStats = ref(false)
+const modelStatsList = ref<any[]>([])
+
 const showRecentCalls = ref(false)
+const recentCalls = ref<any[]>([])
 
 const loadStats = async () => {
   try {
-    const response: any = await api.get('/llm/usage/summary')
-    console.log('[LLMUsage] response:', response)
-    const data = response?.data || response
-    if (data) {
-      stats.value = {
-        totalCalls: data.totalCalls || 0,
-        successfulCalls: data.successfulCalls || 0,
-        failedCalls: data.failedCalls || 0,
-        successRate: data.successRate || 0,
-        sceneSummary: data.sceneSummary || [],
-        modelSummary: data.modelSummary || []
-      }
-    }
+    const response = await api.get('/llm/usage/summary')
+    const rawData = response.data?.data || response.data || []
+    
+    stats.value.totalCalls = rawData.reduce((acc: number, cur: any) => acc + Number(cur.count || 0), 0)
+    stats.value.successCalls = rawData.reduce((acc: number, cur: any) => acc + Number(cur.successCount || cur.count || 0), 0)
+    stats.value.successRate = stats.value.totalCalls > 0 ? (stats.value.successCalls / stats.value.totalCalls) * 100 : 100
   } catch (error) {
     console.error('Failed to load LLM stats:', error)
+  }
+}
+
+const openUserStats = async () => {
+  showUserStats.value = true
+  try {
+    const response = await api.get('/llm/usage/by-user')
+    userStatsList.value = response.data?.data || response.data || []
+  } catch (error) {
+    console.error('Failed to load user stats:', error)
+  }
+}
+
+const openDateStats = async () => {
+  showDateStats.value = true
+  try {
+    const response = await api.get('/llm/usage/by-date')
+    dateStatsList.value = response.data?.data || response.data || []
+  } catch (error) {
+    console.error('Failed to load date stats:', error)
+  }
+}
+
+const openSceneStats = async () => {
+  showSceneStats.value = true
+  try {
+    const response = await api.get('/llm/usage/summary')
+    const rawData = response.data?.data || response.data || []
+    
+    const sceneMap: Record<string, { scene: string; count: number; totalTokens: number }> = {}
+    rawData.forEach((item: any) => {
+      const s = item.scene || 'other'
+      if (!sceneMap[s]) {
+        sceneMap[s] = { scene: s, count: 0, totalTokens: 0 }
+      }
+      sceneMap[s].count += Number(item.count || 0)
+      sceneMap[s].totalTokens += Number(item.totalTokens || item.tokensTotal || 0)
+    })
+    sceneStatsList.value = Object.values(sceneMap)
+  } catch (error) {
+    console.error('Failed to load scene stats:', error)
+  }
+}
+
+const openModelStats = async () => {
+  showModelStats.value = true
+  try {
+    const response = await api.get('/llm/usage/summary')
+    const rawData = response.data?.data || response.data || []
+    
+    const modelMap: Record<string, { model: string; count: number; totalTokens: number }> = {}
+    rawData.forEach((item: any) => {
+      const m = item.model || 'gpt-4-vision-preview'
+      if (!modelMap[m]) {
+        modelMap[m] = { model: m, count: 0, totalTokens: 0 }
+      }
+      modelMap[m].count += Number(item.count || 0)
+      modelMap[m].totalTokens += Number(item.totalTokens || item.tokensTotal || 0)
+    })
+    modelStatsList.value = Object.values(modelMap)
+  } catch (error) {
+    console.error('Failed to load model stats:', error)
   }
 }
 
 const openRecentCalls = async () => {
   showRecentCalls.value = true
   try {
-    const response: any = await api.get('/llm/usage')
-    console.log('[LLMUsage] recentCalls response:', response)
-    recentCalls.value = response?.data || response || []
+    const response = await api.get('/llm/usage')
+    recentCalls.value = response.data?.data || response.data || []
   } catch (error) {
-    console.error('Failed to load recent LLM calls:', error)
+    console.error('Failed to load recent calls:', error)
   }
 }
 
-const getSceneText = (scene: string) => {
-  const texts: Record<string, string> = {
-    recognition: '错题识别',
-    grading: '手写批改',
-    guidance: '引导问答',
-    similar: '相似题生成',
-    other: '其他',
+const getSceneName = (scene: string) => {
+  const scenes: Record<string, string> = {
+    recognition: '错题拍照识别',
+    grading: '手写/问答判题批改',
+    guidance: '解题思路引导',
+    similar: '相似题推荐',
   }
-  return texts[scene] || scene
+  return scenes[scene] || scene
 }
 
-const formatDate = (dateStr?: string) => {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleString()
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 onMounted(() => {
