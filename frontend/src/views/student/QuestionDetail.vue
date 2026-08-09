@@ -20,29 +20,26 @@
         </van-cell>
       </van-cell-group>
       
-      <van-cell-group
-        inset
-        style="margin-top: 16px"
-      >
-        <van-cell title="题目内容">
-          <div class="question-content" v-html="renderMath(question.content)"></div>
-          <div v-if="question.imageUrl" style="margin-top: 12px;">
-            <van-image :src="question.imageUrl" width="100%" fit="contain" radius="8" />
-          </div>
-        </van-cell>
-        <van-cell
-          v-if="question.answer"
-          title="参考答案"
-        >
-          <div class="answer-content" v-html="renderMath(question.answer)"></div>
-        </van-cell>
-        <van-cell
-          v-if="question.explanation"
-          title="解析"
-        >
-          <div class="explanation-content" v-html="renderMath(question.explanation)"></div>
-        </van-cell>
-      </van-cell-group>
+      <!-- 题目内容卡片：单列垂直上下布局 -->
+      <div class="section-card">
+        <div class="section-label">题目内容</div>
+        <div class="section-body question-content" v-html="renderMath(question.content)"></div>
+        <div v-if="question.imageUrl" class="image-wrapper">
+          <van-image :src="question.imageUrl" width="100%" fit="contain" radius="8" />
+        </div>
+      </div>
+
+      <!-- 参考答案卡片：单列垂直上下布局 -->
+      <div v-if="question.answer" class="section-card">
+        <div class="section-label">参考答案</div>
+        <div class="section-body answer-content" v-html="renderMath(question.answer)"></div>
+      </div>
+
+      <!-- 解析说明卡片：单列垂直上下布局 -->
+      <div v-if="question.explanation" class="section-card">
+        <div class="section-label">解析</div>
+        <div class="section-body explanation-content" v-html="renderMath(question.explanation)"></div>
+      </div>
       
       <van-cell-group
         v-if="question.knowledgePoints?.length"
@@ -201,11 +198,34 @@ onMounted(() => {
   line-height: 1.4;
 }
 
-.question-content,
-.answer-content,
-.explanation-content {
-  white-space: pre-wrap;
-  line-height: 1.6;
+/* 独立板块卡片：单列上下布局，取消左侧固定宽度的 title */
+.section-card {
+  margin-top: 16px;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.section-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323233;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--van-primary-color, #1989fa);
+  padding-left: 8px;
+}
+
+.section-body {
+  font-size: 15px;
+  color: #2c3e50;
+  line-height: 1.65;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+.image-wrapper {
+  margin-top: 12px;
 }
 
 .actions {
@@ -217,6 +237,8 @@ onMounted(() => {
   background: white;
   display: flex;
   gap: 12px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  z-index: 99;
 }
 
 .actions .van-button {
