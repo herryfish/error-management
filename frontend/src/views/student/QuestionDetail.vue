@@ -80,8 +80,8 @@
             :label="formatDate(redo.createdAt)"
           >
             <template #value>
-              <van-tag :type="redo.isCorrect ? 'success' : 'danger'">
-                {{ redo.isCorrect ? '解答正确' : '解答错误' }}
+              <van-tag :type="(redo.isCorrect === true || redo.isCorrect == 1 || redo.isCorrect === '1') ? 'success' : 'danger'">
+                {{ (redo.isCorrect === true || redo.isCorrect == 1 || redo.isCorrect === '1') ? '解答正确' : '解答错误' }}
               </van-tag>
             </template>
           </van-cell>

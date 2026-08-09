@@ -81,12 +81,58 @@ export class RedoController {
       const finalAnswer = answer || userAnswer || ""
       const userId = (req as any).user.id
 
+      // 自动化自动判题 (支持选择题/填空题比对)
+      const questionRepository = AppDataSource.getRepository('Question')
+      const question = await questionRepository.findOne({ where: { id: questionId } })
+
+      let isCorrect = false
+      if (question && question.answer) {
+        const normUser = finalAnswer.trim().toUpperCase()
+        const normRef = question.answer.trim().toUpperCase()
+        isCorrect = normUser === normRef
+      }
+
       const redo = this.redoRepository.create({
         type: RedoType.ONLINE,
         answer: finalAnswer,
         questionId,
         studentId: userId,
+        isCorrect,
       })
+
+      // 联动更新 Mastery 状态
+      if (question) {
+        const masteryRepository = AppDataSource.getRepository('Mastery')
+        const mastery = await masteryRepository.findOne({
+          where: { questionId: question.id, studentId: userId }
+        })
+        if (mastery) {
+          if (isCorrect) {
+            mastery.correctCount += 1
+            mastery.lastCorrectDate = new Date()
+            if (mastery.correctCount >= 3) {
+              mastery.status = 'mastered' as any
+            } else {
+              mastery.status = 'learning' as any
+              mastery.intervalLevel = Math.min(mastery.correctCount, 3)
+            }
+          } else {
+            mastery.incorrectCount += 1
+            mastery.lastIncorrectDate = new Date()
+            mastery.status = 'learning' as any
+            mastery.correctCount = 0
+            mastery.intervalLevel = 0
+          }
+          const intervals = [1, 7, 30]
+          if (mastery.intervalLevel > 0 && mastery.intervalLevel <= intervals.length) {
+            const daysToAdd = intervals[mastery.intervalLevel - 1]
+            mastery.nextReviewDate = new Date()
+            mastery.nextReviewDate.setDate(mastery.nextReviewDate.getDate() + daysToAdd)
+          }
+          mastery.lastReviewDate = new Date()
+          await masteryRepository.save(mastery)
+        }
+      }
 
       await this.redoRepository.save(redo)
 

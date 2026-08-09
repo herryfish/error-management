@@ -41,7 +41,7 @@
 
       <!-- 提交反馈结果与解析 -->
       <div v-if="result" class="result-section" style="margin-top: 16px;">
-        <van-cell-group inset :title="result.isCorrect ? '✅ 做对了！' : '❌ 做错了'">
+        <van-cell-group inset :title="(result.isCorrect === true || result.isCorrect == 1 || result.isCorrect === '1') ? '✅ 做对了！' : '❌ 做错了'">
           <van-cell title="参考答案">
             <template #label>
               <div v-html="renderMath(question.answer || '暂无答案')"></div>
