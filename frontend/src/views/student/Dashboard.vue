@@ -105,9 +105,10 @@ const stats = ref({
 })
 
 onMounted(async () => {
-  if (userStore.user?.studentId) {
+  const studentId = userStore.user?.studentId || userStore.user?.id
+  if (studentId) {
     try {
-      const masteryStats = await masteryService.getStats(userStore.user.studentId)
+      const masteryStats = await masteryService.getStats(studentId)
       stats.value = {
         todayTasks: masteryStats.newQuestions + masteryStats.learningQuestions,
         masteryRate: masteryStats.masteryRate,
