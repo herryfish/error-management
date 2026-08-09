@@ -60,8 +60,37 @@
           </van-tag>
         </van-cell>
       </van-cell-group>
+
+      <!-- 重做记录与掌握状态（家长端/全角色视角） -->
+      <van-cell-group
+        inset
+        style="margin-top: 16px"
+        title="学生练习与重做记录"
+      >
+        <van-cell
+          v-if="question.masteryRecords?.length"
+          title="掌握进度"
+          :value="getMasteryStatusText(question.masteryRecords[0].status)"
+        />
+        <template v-if="question.redoRecords?.length">
+          <van-cell
+            v-for="(redo, index) in question.redoRecords"
+            :key="redo.id || index"
+            :title="`第 ${question.redoRecords.length - index} 次重做`"
+            :label="formatDate(redo.createdAt)"
+          >
+            <template #value>
+              <van-tag :type="redo.isCorrect ? 'success' : 'danger'">
+                {{ redo.isCorrect ? '解答正确' : '解答错误' }}
+              </van-tag>
+            </template>
+          </van-cell>
+        </template>
+        <van-cell v-else title="重做记录" value="暂无重做记录" />
+      </van-cell-group>
       
-      <div class="actions">
+      <!-- 学生端展示操作按钮，家长与管理员端隐藏重做按钮 -->
+      <div v-if="isStudent" class="actions">
         <van-button
           type="primary"
           block
@@ -87,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { questionService, type Question } from '@/services/questions'
 import { renderMath } from '@/utils/math'
@@ -95,6 +124,10 @@ import { renderMath } from '@/utils/math'
 const route = useRoute()
 const router = useRouter()
 const question = ref<Question | null>(null)
+
+// 角色判定：是否为学生视角
+const userRole = ref(localStorage.getItem('userRole') || 'student')
+const isStudent = computed(() => userRole.value === 'student')
 
 const loadQuestion = async () => {
   try {
@@ -129,6 +162,22 @@ const getTypeText = (type: string) => {
     answer: '解答题',
   }
   return texts[type] || type
+}
+
+const getMasteryStatusText = (status: string) => {
+  const texts: Record<string, string> = {
+    new: '新错题',
+    learning: '学习中',
+    reviewing: '复习中',
+    mastered: '已掌握',
+  }
+  return texts[status] || status
+}
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
 onMounted(() => {

@@ -52,6 +52,10 @@ export interface Question {
   createdAt: string
   /** 更新时间 */
   updatedAt: string
+  /** 重做历史记录 */
+  redoRecords?: any[]
+  /** 掌握进度记录 */
+  masteryRecords?: any[]
 }
 
 /**
