@@ -408,3 +408,21 @@ volumes:
 4. **降级与防线 (Fallback & Audit Log)**：
    - 若大模型调用失败或配置未开启，降级为预设判题规则（提示待人工审核/改判）。
    - 判题结果写入 `llm_usage` 监控表，便于管理员审计。
+
+## 18. 模型选择限制与白名单规范 (Model Dropdown & Whitelist Spec)
+
+为防止管理员在界面配置时误输入不兼容或拼错的模型名称导致大模型调用失败，系统对控制台模型配置实行强制下拉框（Dropdown）与白名单选择机制。
+
+### 18.1 模型白名单配置与分类
+
+1. **白名单定义**：
+   - 系统定义预设模型白名单，按能力分类：
+     - **视觉/通用模型 (Vision/Multimodal)**：`gpt-4o`, `gpt-4-vision-preview`, `claude-3-5-sonnet-20240620`, `sensenova-6.7-flash-lite`。
+     - **纯文本/高推理模型 (Text/Reasoning)**：`gpt-4o-mini`, `gpt-3.5-turbo`, `deepseek-r1`, `deepseek-chat`, `claude-3-haiku-20240307`。
+2. **场景差异化限定 (Scene-Model Binding)**：
+   - **错题识别场景 (`recognition`)**：仅允许在具备视觉能力的模型白名单中进行下拉选择。
+   - **手写批改/问答题判题 (`grading`)**与 **相似题生成 (`similar`)**：允许从全量模型白名单中进行下拉选择。
+3. **主/备分别下拉控制**：
+   - 界面针对主模型 (Primary Model) 和 降级备用模型 (Fallback Model) 分别提供独立的 Dropdown 选框。
+4. **失效模型容错显示 (Backwards Compatibility)**：
+   - 若数据库中保存的既有模型不在当前系统白名单内，下拉框临时保留并高亮标记 `[已下线/历史模型]`，告警提示管理员重新选择。
