@@ -135,11 +135,10 @@ const recentCalls = ref<any[]>([])
 const loadStats = async () => {
   try {
     const response = await api.get('/llm/usage/summary')
-    const rawData = response.data?.data || response.data || []
-    
-    stats.value.totalCalls = rawData.reduce((acc: number, cur: any) => acc + Number(cur.count || 0), 0)
-    stats.value.successCalls = rawData.reduce((acc: number, cur: any) => acc + Number(cur.successCount || cur.count || 0), 0)
-    stats.value.successRate = stats.value.totalCalls > 0 ? (stats.value.successCalls / stats.value.totalCalls) * 100 : 100
+    const resData = response.data?.data || response.data || {}
+    stats.value.totalCalls = Number(resData.totalCalls || 0)
+    stats.value.successCalls = Number(resData.successfulCalls || 0)
+    stats.value.successRate = Number(resData.successRate || 0)
   } catch (error) {
     console.error('Failed to load LLM stats:', error)
   }
@@ -169,18 +168,12 @@ const openSceneStats = async () => {
   showSceneStats.value = true
   try {
     const response = await api.get('/llm/usage/summary')
-    const rawData = response.data?.data || response.data || []
-    
-    const sceneMap: Record<string, { scene: string; count: number; totalTokens: number }> = {}
-    rawData.forEach((item: any) => {
-      const s = item.scene || 'other'
-      if (!sceneMap[s]) {
-        sceneMap[s] = { scene: s, count: 0, totalTokens: 0 }
-      }
-      sceneMap[s].count += Number(item.count || 0)
-      sceneMap[s].totalTokens += Number(item.totalTokens || item.tokensTotal || 0)
-    })
-    sceneStatsList.value = Object.values(sceneMap)
+    const resData = response.data?.data || response.data || {}
+    sceneStatsList.value = (resData.sceneSummary || []).map((s: any) => ({
+      scene: s.scene,
+      count: Number(s.count || 0),
+      totalTokens: Number(s.totalTokens || 0)
+    }))
   } catch (error) {
     console.error('Failed to load scene stats:', error)
   }
@@ -190,18 +183,12 @@ const openModelStats = async () => {
   showModelStats.value = true
   try {
     const response = await api.get('/llm/usage/summary')
-    const rawData = response.data?.data || response.data || []
-    
-    const modelMap: Record<string, { model: string; count: number; totalTokens: number }> = {}
-    rawData.forEach((item: any) => {
-      const m = item.model || 'gpt-4-vision-preview'
-      if (!modelMap[m]) {
-        modelMap[m] = { model: m, count: 0, totalTokens: 0 }
-      }
-      modelMap[m].count += Number(item.count || 0)
-      modelMap[m].totalTokens += Number(item.totalTokens || item.tokensTotal || 0)
-    })
-    modelStatsList.value = Object.values(modelMap)
+    const resData = response.data?.data || response.data || {}
+    modelStatsList.value = (resData.modelSummary || []).map((m: any) => ({
+      model: m.model || 'gpt-4-vision-preview',
+      count: Number(m.count || 0),
+      totalTokens: Number(m.totalTokens || 0)
+    }))
   } catch (error) {
     console.error('Failed to load model stats:', error)
   }
