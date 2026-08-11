@@ -185,16 +185,43 @@ export class LLMController {
         where: { success: true },
       })
 
+      const formattedSceneSummary = sceneSummary.map((s: any) => ({
+        ...s,
+        count: Number(s.count || 0),
+        totalTokens: Number(s.totalTokens || 0),
+        totalCost: Number(s.totalCost || 0),
+        avgLatency: Number(s.avgLatency || 0),
+      }))
+
+      const formattedModelSummary = modelSummary.map((m: any) => ({
+        ...m,
+        count: Number(m.count || 0),
+        totalTokens: Number(m.totalTokens || 0),
+        totalCost: Number(m.totalCost || 0),
+      }))
+
+      const formattedDailySummary = dailySummary.map((d: any) => ({
+        ...d,
+        count: Number(d.count || 0),
+        totalTokens: Number(d.totalTokens || 0),
+        totalCost: Number(d.totalCost || 0),
+      }))
+
+      const totalTokensSum = formattedSceneSummary.reduce((acc: number, cur: any) => acc + cur.totalTokens, 0)
+      const totalCostSum = formattedSceneSummary.reduce((acc: number, cur: any) => acc + cur.totalCost, 0)
+
       res.json({
         status: 'success',
         data: {
-          sceneSummary,
-          modelSummary,
-          dailySummary,
-          successRate: totalCalls > 0 ? Math.round((successfulCalls / totalCalls) * 100) : 0,
           totalCalls,
           successfulCalls,
           failedCalls: totalCalls - successfulCalls,
+          successRate: totalCalls > 0 ? Math.round((successfulCalls / totalCalls) * 100) : 0,
+          totalTokens: totalTokensSum,
+          totalCost: totalCostSum,
+          sceneSummary: formattedSceneSummary,
+          modelSummary: formattedModelSummary,
+          dailySummary: formattedDailySummary,
         },
       })
     } catch (error) {
