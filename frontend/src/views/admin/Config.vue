@@ -134,6 +134,41 @@
             @cancel="showPickerSimilarFb = false"
           />
         </van-popup>
+
+        <!-- 解题引导问答：全量模型白名单 -->
+        <van-field
+          v-model="form.llm_model_guidance"
+          is-link
+          readonly
+          name="picker_guidance"
+          label="引导问答主模型"
+          placeholder="选择引导问答主模型"
+          @click="showPickerGuidance = true"
+        />
+        <van-popup v-model:show="showPickerGuidance" position="bottom" round>
+          <van-picker
+            :columns="allModelColumns"
+            @confirm="onConfirmGuidance"
+            @cancel="showPickerGuidance = false"
+          />
+        </van-popup>
+
+        <van-field
+          v-model="form.llm_model_guidance_fallback"
+          is-link
+          readonly
+          name="picker_guidance_fb"
+          label="引导问答降级模型"
+          placeholder="选择引导问答降级模型"
+          @click="showPickerGuidanceFb = true"
+        />
+        <van-popup v-model:show="showPickerGuidanceFb" position="bottom" round>
+          <van-picker
+            :columns="allModelColumns"
+            @confirm="onConfirmGuidanceFb"
+            @cancel="showPickerGuidanceFb = false"
+          />
+        </van-popup>
       </van-cell-group>
 
       <div style="margin: 24px 16px;">
@@ -182,6 +217,8 @@ const form = ref({
   llm_model_grading_fallback: 'deepseek-r1',
   llm_model_similar: 'gpt-4o',
   llm_model_similar_fallback: 'deepseek-chat',
+  llm_model_guidance: 'gpt-4o-mini',
+  llm_model_guidance_fallback: 'deepseek-chat',
 })
 
 // 弹出 Picker 状态
@@ -191,6 +228,8 @@ const showPickerGrading = ref(false)
 const showPickerGradingFb = ref(false)
 const showPickerSimilar = ref(false)
 const showPickerSimilarFb = ref(false)
+const showPickerGuidance = ref(false)
+const showPickerGuidanceFb = ref(false)
 
 // 构建带容错标记的 Column 选项
 const buildColumns = (whiteList: Array<{ text: string; value: string }>, currentValue: string) => {
@@ -237,6 +276,16 @@ const onConfirmSimilarFb = ({ selectedOptions }: any) => {
   showPickerSimilarFb.value = false
 }
 
+const onConfirmGuidance = ({ selectedOptions }: any) => {
+  form.value.llm_model_guidance = selectedOptions[0]?.value || ''
+  showPickerGuidance.value = false
+}
+
+const onConfirmGuidanceFb = ({ selectedOptions }: any) => {
+  form.value.llm_model_guidance_fallback = selectedOptions[0]?.value || ''
+  showPickerGuidanceFb.value = false
+}
+
 const loadConfig = async () => {
   try {
     const res = await api.get('/admin/config')
@@ -266,6 +315,8 @@ const saveConfig = async () => {
       { key: 'llm_model_grading_fallback', value: form.value.llm_model_grading_fallback, category: 'llm' },
       { key: 'llm_model_similar', value: form.value.llm_model_similar, category: 'llm' },
       { key: 'llm_model_similar_fallback', value: form.value.llm_model_similar_fallback, category: 'llm' },
+      { key: 'llm_model_guidance', value: form.value.llm_model_guidance, category: 'llm' },
+      { key: 'llm_model_guidance_fallback', value: form.value.llm_model_guidance_fallback, category: 'llm' },
     ]
 
     for (const item of entries) {
