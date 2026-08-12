@@ -1546,3 +1546,79 @@ Token可以通过登录接口获取，有效期为7天。
 
 *API文档版本：v1.0.0*
 *最后更新：2024-01-01*
+### PUT /api/admin/users/:id/password
+
+管理员重置/修改指定用户的密码。
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "password": "new_password_123456"
+}
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "data": {
+    "id": "3c9a7ef0-5709-4ba6-82bc-7666f707d40f",
+    "username": "test_student"
+  }
+}
+```
+
+### GET /api/llm/usage/by-user
+
+按用户维度统计 LLM Token 用量分布（仅限管理员）。
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "userId": "3c9a7ef0-5709-4ba6-82bc-7666f707d40f",
+      "username": "test_student",
+      "role": "student",
+      "count": 24,
+      "tokensTotal": 77970,
+      "tokensInput": 60000,
+      "tokensOutput": 17970
+    }
+  ]
+}
+```
+
+### GET /api/llm/usage/by-date
+
+按日期维度统计近 7 天 / 近 30 天每日 LLM 调用与 Token 用量（仅限管理员）。
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "date": "2026-08-09",
+      "count": 5,
+      "tokensTotal": 5752
+    }
+  ]
+}
+```
