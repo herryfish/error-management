@@ -709,4 +709,90 @@ Return the result in JSON format.`,
       }
     }
   }
+
+  async identifyMultiQuestions(imagePath: string, userId: string): Promise<any> {
+    const startTime = Date.now()
+    try {
+      const result = await this.callPrimaryLLMForMulti(imagePath)
+      const latencyMs = Date.now() - startTime
+      await this.recordUsage({
+        userId,
+        scene: LLMScene.MULTI_RECOGNITION,
+        provider: this.config.primary.provider,
+        model: this.config.primary.model,
+        isFallback: false,
+        tokens: result.tokens || { input: 0, output: 0, total: 0 },
+        cost: 0,
+        latencyMs,
+        success: true,
+      })
+      return result.items
+    } catch (error) {
+      console.error('LLM identifyMultiQuestions failed, fallback to default:', error)
+      return null
+    }
+  }
+
+  private async callPrimaryLLMForMulti(imagePath: string): Promise<any> {
+    if (!this.primaryClient) {
+      throw new Error('Primary LLM client not configured')
+    }
+    const response = await this.primaryClient.chat.completions.create({
+      model: this.config.primary.model,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Analyze this full page question image containing multiple questions. Identify and slice ALL wrong questions on the page. Return ONLY a valid JSON object with an "items" array (no markdown codeblock, no explanation):
+
+{
+  "items": [
+    {
+      "title": "question title",
+      "content": "full question text with formulas",
+      "subject": "math" or "physics" or "chemistry",
+      "type": "choice" or "fill" or "answer",
+      "difficulty": 1-5,
+      "knowledgePoints": ["tag1"],
+      "answer": "correct answer if visible",
+      "explanation": "solution explanation if visible"
+    }
+  ]
+}`,
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${await this.imageToBase64(imagePath)}`,
+              },
+            },
+          ],
+        },
+      ],
+      max_tokens: 2000,
+    })
+
+    const content = response.choices[0]?.message?.content
+    if (content) {
+      let cleanContent = content.trim()
+      if (cleanContent.startsWith('```json')) {
+        cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+      } else if (cleanContent.startsWith('```')) {
+        cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '')
+      }
+      const parsed = JSON.parse(cleanContent)
+      return {
+        items: parsed.items || parsed,
+        tokens: {
+          input: response.usage?.prompt_tokens || 0,
+          output: response.usage?.completion_tokens || 0,
+          total: response.usage?.total_tokens || 0,
+        },
+      }
+    }
+    throw new Error('Empty response from LLM')
+  }
+
 }

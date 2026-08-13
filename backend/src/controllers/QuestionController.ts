@@ -394,8 +394,26 @@ export class QuestionController {
       const userId = (req as any).user?.id
       const subject = req.body.subject || Subject.MATH
 
-      // 组装多题识别预切分数据 (模拟与多题 Vision AI 配合)
-      const mockItems = [
+      let llmItems: any[] = []
+      try {
+        const llmResult = await this.llmService.identifyMultiQuestions(req.file.path, userId)
+        if (Array.isArray(llmResult) && llmResult.length > 0) {
+          llmItems = llmResult.map((item: any, idx: number) => ({
+            tempId: uuidv4(),
+            title: item.title || `识别题目 ${idx + 1}`,
+            content: item.content || '',
+            subject: item.subject || subject,
+            type: item.type || QuestionType.CHOICE,
+            answer: item.answer || '',
+            explanation: item.explanation || '',
+            isDuplicate: false,
+          }))
+        }
+      } catch (err) {
+        console.error('LLM identifyMultiQuestions error:', err)
+      }
+
+      const mockItems = llmItems.length > 0 ? llmItems : [
         {
           tempId: uuidv4(),
           title: '识别题目 1',
