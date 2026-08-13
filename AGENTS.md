@@ -141,3 +141,16 @@ cd backend && npm install && npm run dev
 - `design/` 目录：系统架构、数据库设计、API设计、部署架构、工程自动化设计文档。
 - `implementation_plan.md`：实现计划，包含技术选型和PR拆分。
 - `README.md`：项目说明和快速开始指南。
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked on GitHub via `gh issue` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default canonical label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context repository layout (`CONTEXT.md` + `docs/adr/`). See `docs/agents/domain.md`.
