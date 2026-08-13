@@ -300,7 +300,7 @@ const saveBatchQuestions = async () => {
   try {
     await questionService.createBatch(itemsToSave)
     showToast('批量导入成功！')
-    router.push('/student/questions')
+    router.push('/questions')
   } catch (err: any) {
     showToast(err.message || '批量保存失败')
   } finally {
@@ -363,9 +363,9 @@ const submitForm = async (force: boolean = false) => {
         cancelButtonText: '仍要保存',
       }).then(() => {
         if (data.existingQuestionId) {
-          router.push(`/student/questions/${data.existingQuestionId}`)
+          router.push(`/questions/${data.existingQuestionId}`)
         } else {
-          router.push('/student/questions')
+          router.push('/questions')
         }
       }).catch(() => {
         submitForm(true)
