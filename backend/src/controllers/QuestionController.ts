@@ -377,4 +377,130 @@ export class QuestionController {
       next(error)
     }
   }
+
+  identifyMultiQuestions = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Please upload an image',
+        })
+      }
+
+      const userId = (req as any).user?.id
+      const subject = req.body.subject || Subject.MATH
+
+      // 组装多题识别预切分数据 (模拟与多题 Vision AI 配合)
+      const mockItems = [
+        {
+          tempId: uuidv4(),
+          title: '识别题目 1',
+          content: '计算：2 + 3 = ?',
+          subject: subject,
+          type: QuestionType.CHOICE,
+          answer: '5',
+          explanation: '基础加法运算',
+          isDuplicate: false,
+        },
+        {
+          tempId: uuidv4(),
+          title: '识别题目 2',
+          content: '求解方程：x^2 - 4 = 0',
+          subject: subject,
+          type: QuestionType.ANSWER,
+          answer: 'x = ±2',
+          explanation: '因式分解求解',
+          isDuplicate: false,
+        }
+      ]
+
+      // 计算文本指纹防重逻辑
+      for (const item of mockItems) {
+        const fp = (item.title + item.content).replace(/\s+/g, '').replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '')
+        if (userId && fp) {
+          const existingList = await this.questionRepository.find({ where: { studentId: userId, subject: subject as any } })
+          const dup = existingList.find(q => {
+            const qfp = (q.title + q.content).replace(/\s+/g, '').replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '')
+            return qfp === fp
+          })
+          if (dup) {
+            item.isDuplicate = true
+            ;(item as any).existingQuestionId = dup.id
+          }
+        }
+      }
+
+      res.json({
+        status: 'success',
+        data: {
+          items: mockItems,
+        },
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  createBatchQuestions = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { items } = req.body
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Items array is required and must not be empty',
+        })
+      }
+
+      const userId = (req as any).user?.id || req.body.studentId
+      const savedQuestions: Question[] = []
+
+      // 开启数据库事务保存
+      await AppDataSource.transaction(async (transactionalEntityManager) => {
+        for (const item of items) {
+          const question = transactionalEntityManager.create(Question, {
+            title: item.title || '批量录入题目',
+            content: item.content || '',
+            subject: item.subject || Subject.MATH,
+            type: item.type || QuestionType.CHOICE,
+            difficulty: item.difficulty || 3,
+            knowledgePoints: item.knowledgePoints || [],
+            answer: item.answer || null,
+            explanation: item.explanation || null,
+            studentId: userId,
+            isIdentified: true,
+          })
+
+          const saved = await transactionalEntityManager.save(question)
+          savedQuestions.push(saved)
+
+          // 自动生成初始 Mastery 掌握记录
+          const masteryRepo = transactionalEntityManager.getRepository(Mastery)
+          const mastery = masteryRepo.create({
+            questionId: saved.id,
+            studentId: userId,
+            status: MasteryStatus.NEW,
+            correctCount: 0,
+            incorrectCount: 0,
+            intervalLevel: 0,
+          })
+          await masteryRepo.save(mastery)
+        }
+      })
+
+      res.status(201).json({
+        status: 'success',
+        data: savedQuestions,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
 }

@@ -47,6 +47,14 @@ router.post(
   questionController.identifyQuestion
 )
 
+router.post(
+  '/identify-multi',
+  upload.single('image'),
+  questionController.identifyMultiQuestions
+)
+
+router.post('/batch', questionController.createBatchQuestions)
+
 // Student-specific routes
 router.get(
   '/student/:studentId',

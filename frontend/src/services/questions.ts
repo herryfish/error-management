@@ -176,6 +176,31 @@ export const questionService = {
     return result
   },
 
+    async identifyMulti(image: File, subject?: string): Promise<{ items: any[] }> {
+    const formData = new FormData()
+    formData.append('image', image)
+    if (subject) formData.append('subject', subject)
+
+    const token = localStorage.getItem('token')
+    const response = await fetch('/api/questions/identify-multi', {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    })
+    const result = await response.json()
+    if (!response.ok) {
+      throw new Error(result.message || `HTTP ${response.status}`)
+    }
+    return result.data || result
+  },
+
+  async createBatch(items: any[]): Promise<Question[]> {
+    const response = await api.post('/questions/batch', { items })
+    return response.data
+  },
+
   async getByStudent(studentId: string): Promise<Question[]> {
     const response = await api.get(`/questions/student/${studentId}`)
     return response.data

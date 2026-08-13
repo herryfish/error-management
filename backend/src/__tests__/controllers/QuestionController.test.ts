@@ -172,4 +172,20 @@ describe('QuestionController', () => {
       fs.readFileSync.mockRestore()
     })
   })
+
+  describe('identifyMultiQuestions', () => {
+    it('应该在没有上传文件时返回 400 错误', async () => {
+      const res = mockRes()
+      await controller.identifyMultiQuestions(mockReq({}, {}, {}, null), res, mockNext)
+      expect(res.status).toHaveBeenCalledWith(400)
+    })
+  })
+
+  describe('createBatchQuestions', () => {
+    it('应该在请求体缺少 items 数组时返回 400 错误', async () => {
+      const res = mockRes()
+      await controller.createBatchQuestions(mockReq({}, {}, {}), res, mockNext)
+      expect(res.status).toHaveBeenCalledWith(400)
+    })
+  })
 })

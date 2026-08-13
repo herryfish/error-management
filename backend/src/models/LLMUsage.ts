@@ -13,6 +13,7 @@ export enum LLMScene {
   GRADING = 'grading',
   GUIDANCE = 'guidance',
   SIMILAR = 'similar',
+  MULTI_RECOGNITION = 'multi_recognition',
   OTHER = 'other',
 }
 

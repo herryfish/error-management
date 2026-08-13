@@ -91,7 +91,76 @@
         </van-form>
       </van-tab>
       
-      <van-tab title="拍照识别">
+            <van-tab title="整页多题识别">
+        <div class="photo-section">
+          <input
+            ref="multiFileInputRef"
+            type="file"
+            accept="image/*"
+            style="display: none"
+            @change="onMultiFileChange"
+          />
+          <div class="upload-content" @click="triggerMultiFileInput">
+            <template v-if="multiPreviewUrl">
+              <img :src="multiPreviewUrl" style="max-width: 200px; max-height: 200px; border-radius: 8px;" />
+            </template>
+            <template v-else>
+              <van-icon name="description" size="48" />
+              <div>点击上传整页试卷/作业图片</div>
+            </template>
+          </div>
+
+          <van-button
+            v-if="multiSelectedFile"
+            type="primary"
+            block
+            :loading="multiIdentifying"
+            style="margin-top: 16px;"
+            @click="identifyMultiQuestions"
+          >
+            整页智能切分与识别
+          </van-button>
+
+          <div v-if="multiItems && multiItems.length > 0" class="multi-items-list" style="margin-top: 16px; text-align: left;">
+            <div style="font-weight: 600; margin-bottom: 8px; font-size: 15px;">识别结果列表 (勾选需要导入的题目)：</div>
+            <van-checkbox-group v-model="selectedMultiIds">
+              <van-cell-group inset v-for="item in multiItems" :key="item.tempId" style="margin-bottom: 12px;">
+                <van-cell clickable @click="toggleMultiItem(item.tempId)">
+                  <template #title>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                      <van-checkbox :name="item.tempId" @click.stop />
+                      <van-tag v-if="item.isDuplicate" type="warning" style="margin-left: 8px;">已存在错题</van-tag>
+                    </div>
+                  </template>
+                  <template #label>
+                    <div style="margin-top: 6px;">
+                      <div class="item-title-field" style="margin-bottom: 4px;">
+                        <van-field v-model="item.title" label="标题" placeholder="题目简短标题" />
+                      </div>
+                      <div class="item-content-field">
+                        <van-field v-model="item.content" type="textarea" rows="2" label="题干" placeholder="题目内容" />
+                      </div>
+                      <div style="margin-top: 4px; color: #646566; font-size: 13px;" v-html="renderMath(item.content)"></div>
+                    </div>
+                  </template>
+                </van-cell>
+              </van-cell-group>
+            </van-checkbox-group>
+
+            <van-button
+              type="success"
+              block
+              round
+              :loading="batchSubmitting"
+              style="margin-top: 16px;"
+              @click="saveBatchQuestions"
+            >
+              一键批量导入选中的题目 ({{ selectedMultiIds.length }} 道)
+            </van-button>
+          </div>
+        </div>
+      </van-tab>
+<van-tab title="拍照识别">
         <div class="photo-section">
           <input
             ref="fileInputRef"
@@ -172,6 +241,73 @@ const identifiedQuestion = ref<Question | null>(null)
 const selectedFile = ref<File | null>(null)
 const previewUrl = ref('')
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const multiFileInputRef = ref<HTMLInputElement | null>(null)
+const multiSelectedFile = ref<File | null>(null)
+const multiPreviewUrl = ref('')
+const multiIdentifying = ref(false)
+const multiItems = ref<any[]>([])
+const selectedMultiIds = ref<string[]>([])
+const batchSubmitting = ref(false)
+
+const triggerMultiFileInput = () => {
+  multiFileInputRef.value?.click()
+}
+
+const onMultiFileChange = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files.length > 0) {
+    const file = input.files[0]
+    multiSelectedFile.value = file
+    multiPreviewUrl.value = URL.createObjectURL(file)
+    showToast('整页试卷图片已选择')
+  }
+}
+
+const identifyMultiQuestions = async () => {
+  if (!multiSelectedFile.value) {
+    showToast('请先上传整页图片')
+    return
+  }
+  multiIdentifying.value = true
+  try {
+    const res = await questionService.identifyMulti(multiSelectedFile.value)
+    multiItems.value = res.items || []
+    selectedMultiIds.value = multiItems.value.map(i => i.tempId)
+    showToast('整页多题切分成功')
+  } catch (err: any) {
+    showToast(err.message || '多题识别失败')
+  } finally {
+    multiIdentifying.value = false
+  }
+}
+
+const toggleMultiItem = (id: string) => {
+  const index = selectedMultiIds.value.indexOf(id)
+  if (index > -1) {
+    selectedMultiIds.value.splice(index, 1)
+  } else {
+    selectedMultiIds.value.push(id)
+  }
+}
+
+const saveBatchQuestions = async () => {
+  const itemsToSave = multiItems.value.filter(i => selectedMultiIds.value.includes(i.tempId))
+  if (itemsToSave.length === 0) {
+    showToast('请至少勾选一道题目')
+    return
+  }
+  batchSubmitting.value = true
+  try {
+    await questionService.createBatch(itemsToSave)
+    showToast('批量导入成功！')
+    router.push('/student/questions')
+  } catch (err: any) {
+    showToast(err.message || '批量保存失败')
+  } finally {
+    batchSubmitting.value = false
+  }
+}
+
 
 const form = ref({
   title: '',
