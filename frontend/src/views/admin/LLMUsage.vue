@@ -210,6 +210,7 @@ const getSceneName = (scene: string) => {
     grading: '手写/问答判题批改',
     guidance: '解题思路引导',
     similar: '相似题推荐',
+    multi_recognition: '整页多题切分识别',
   }
   return scenes[scene] || scene
 }
