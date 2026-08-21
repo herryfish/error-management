@@ -1125,6 +1125,22 @@ Authorization: Bearer <token>
 
 ### GET /api/llm/usage/summary
 
+### POST /api/questions/identify-multi
+大模型多题切分识别接口，支持上传整页图片，自动定位并识别页面中的多道错题。
+
+#### 请求
+- Header: `Content-Type: multipart/form-data`
+- Body: `file` (Buffer/Stream)
+
+#### 响应
+```json
+{
+  "status": "success",
+  "data": [
+    { "title": "...", "content": "...", "answer": "...", "bbox": [0,0,100,100] }
+  ]
+}
+```
 获取LLM用量汇总
 
 **请求头**:

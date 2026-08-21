@@ -323,7 +323,11 @@ onMounted(() => {
   position: fixed;
   bottom: 20px;
   left: 16px;
-  right: 16px;
+  width: calc(100% - 32px);
+  max-width: 500px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99;
 }
 
 .search-panel {

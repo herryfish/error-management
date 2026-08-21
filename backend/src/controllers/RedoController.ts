@@ -81,6 +81,27 @@ export class RedoController {
       const finalAnswer = answer || userAnswer || ""
       const userId = (req as any).user.id
 
+      // 校验该学生今天是否已经对该题目进行过重做（避免当天重复刷题）
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+      const todayEnd = new Date()
+      todayEnd.setHours(23, 59, 59, 999)
+
+      const existingRedoToday = await this.redoRepository
+        .createQueryBuilder('redo')
+        .where('redo.questionId = :questionId', { questionId })
+        .andWhere('redo.studentId = :studentId', { studentId: userId })
+        .andWhere('redo.createdAt >= :todayStart', { todayStart })
+        .andWhere('redo.createdAt <= :todayEnd', { todayEnd })
+        .getOne()
+
+      if (existingRedoToday) {
+        return res.status(400).json({
+          status: 'error',
+          message: '今日已完成该题目的重做练习，请明日再试，避免重复刷题。',
+        })
+      }
+
       // 自动化自动判题 (支持选择题/填空题比对)
       const questionRepository = AppDataSource.getRepository('Question')
       const question = await questionRepository.findOne({ where: { id: questionId } })

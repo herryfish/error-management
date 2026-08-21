@@ -50,22 +50,6 @@
         @click="$router.push('/reports/stats')"
       />
     </van-cell-group>
-
-    <div class="section-title">账号与设置</div>
-    <van-cell-group inset>
-      <van-cell
-        title="个人账号"
-        is-link
-        icon="user-o"
-        @click="$router.push('/account')"
-      />
-      <van-cell
-        title="系统设置"
-        is-link
-        icon="setting-o"
-        @click="$router.push('/settings')"
-      />
-    </van-cell-group>
   </div>
 </template>
 

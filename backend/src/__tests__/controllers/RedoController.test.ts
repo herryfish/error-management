@@ -40,6 +40,11 @@ describe('RedoController', () => {
   describe('createRedo', () => {
     it('应该成功创建重做记录', async () => {
       const mockRedo = (controller as any).redoRepository
+      mockRedo.createQueryBuilder.mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      })
       mockRedo.create.mockImplementation((data: any) => ({ id: 'r1', ...data }))
       mockRedo.save.mockImplementation(async (data: any) => data)
       const res = mockRes()

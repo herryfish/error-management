@@ -9,17 +9,20 @@
     <div v-if="question" class="content">
       <van-cell-group inset>
         <van-cell
-          :label="`${question.subject} · 难度${question.difficulty}`"
+          :label="`${getSubjectText(question.subject)} · ${getTypeText(question.type)} · 难度${question.difficulty}`"
         >
           <template #title>
             <div class="question-title-rendered" v-html="renderMath(question.title)"></div>
           </template>
         </van-cell>
 
-        <van-cell title="题目">
-          <div class="question-content" v-html="renderMath(question.content)"></div>
-        </van-cell>
       </van-cell-group>
+      
+      <!-- 题目内容卡片：对齐题目详情页单列卡片化布局 -->
+      <div class="section-card">
+        <div class="section-label">题目内容</div>
+        <div class="section-body question-content" v-html="renderMath(question.content)"></div>
+      </div>
       
       <van-form @submit="onSubmit" style="margin-top: 16px;">
         <van-cell-group inset title="你的解答">
@@ -28,13 +31,14 @@
             type="textarea"
             rows="4"
             placeholder="请输入你的作答内容..."
+            :disabled="!!result"
             :rules="[{ required: true, message: '请填写作答内容' }]"
           />
         </van-cell-group>
         
         <div style="margin: 16px;">
-          <van-button round block type="primary" native-type="submit" :loading="submitting">
-            提交解答
+          <van-button round block type="primary" native-type="submit" :loading="submitting" :disabled="!!result">
+            {{ result ? '已提交答案' : '提交解答' }}
           </van-button>
         </div>
       </van-form>
@@ -72,6 +76,24 @@ const userAnswer = ref('')
 const submitting = ref(false)
 const result = ref<any | null>(null)
 
+const getSubjectText = (subject: string) => {
+  const texts: Record<string, string> = {
+    math: '数学',
+    physics: '物理',
+    chemistry: '化学',
+  }
+  return texts[subject] || subject
+}
+
+const getTypeText = (type: string) => {
+  const texts: Record<string, string> = {
+    choice: '选择题',
+    fill: '填空题',
+    answer: '解答题',
+  }
+  return texts[type] || type
+}
+
 onMounted(async () => {
   try {
     const questionId = route.params.questionId as string
@@ -102,17 +124,45 @@ const onSubmit = async () => {
 <style scoped>
 .redo-page {
   padding-bottom: 80px;
+  background-color: #f7f8fa;
+  min-height: 100vh;
+}
+
+.content {
+  padding: 16px;
 }
 
 .question-title-rendered {
   font-size: 16px;
   font-weight: 600;
   color: #323233;
+  line-height: 1.4;
 }
 
-.question-content {
-  font-size: 15px;
-  color: #323233;
-  line-height: 1.6;
+/* 独立板块卡片：单列上下布局，对齐题目详情页样式 */
+.section-card {
+  margin-top: 16px;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
+
+.section-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323233;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--van-primary-color, #1989fa);
+  padding-left: 8px;
+}
+
+.section-body {
+  font-size: 15px;
+  color: #2c3e50;
+  line-height: 1.65;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
 </style>

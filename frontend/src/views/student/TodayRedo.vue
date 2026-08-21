@@ -23,14 +23,24 @@ const userStore = useUserStore()
 const loading = ref(false)
 const records = ref<RedoRecord[]>([])
 
+const isToday = (dateStr?: string) => {
+  if (!dateStr) return false
+  const d = new Date(dateStr)
+  const now = new Date()
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  )
+}
+
 onMounted(async () => {
   loading.value = true
   try {
     const studentId = userStore.user?.studentId || userStore.user?.id
     if (studentId) {
       const all = await redoService.getByStudent(studentId)
-      const today = new Date().toISOString().substring(0, 10)
-      records.value = all.filter(r => r.createdAt?.startsWith(today))
+      records.value = all.filter(r => isToday(r.createdAt))
     }
   } catch (e) { console.error(e) }
   finally { loading.value = false }

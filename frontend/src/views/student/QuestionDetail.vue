@@ -25,20 +25,39 @@
         <div class="section-label">题目内容</div>
         <div class="section-body question-content" v-html="renderMath(question.content)"></div>
         <div v-if="question.imageUrl" class="image-wrapper">
-          <van-image :src="question.imageUrl" width="100%" fit="contain" radius="8" />
+          <div class="image-toggle-header" @click="showImage = !showImage">
+            <span class="image-toggle-text">原图照片（可能包含笔记/手写批改）</span>
+            <span class="toggle-link">
+              {{ showImage ? '折叠原图' : '点击查看原图' }}
+              <van-icon :name="showImage ? 'arrow-up' : 'arrow-down'" />
+            </span>
+          </div>
+          <van-image v-if="showImage" :src="question.imageUrl" width="100%" fit="contain" radius="8" style="margin-top: 8px;" />
         </div>
       </div>
 
       <!-- 参考答案卡片：单列垂直上下布局 -->
       <div v-if="question.answer" class="section-card">
-        <div class="section-label">参考答案</div>
-        <div class="section-body answer-content" v-html="renderMath(question.answer)"></div>
+        <div class="section-label-header" @click="showAnswer = !showAnswer">
+          <span class="section-label">参考答案</span>
+          <span class="toggle-link">
+            {{ showAnswer ? '折叠' : '点击查看答案' }}
+            <van-icon :name="showAnswer ? 'arrow-up' : 'arrow-down'" />
+          </span>
+        </div>
+        <div v-if="showAnswer" class="section-body answer-content" v-html="renderMath(question.answer)"></div>
       </div>
 
       <!-- 解析说明卡片：单列垂直上下布局 -->
       <div v-if="question.explanation" class="section-card">
-        <div class="section-label">解析</div>
-        <div class="section-body explanation-content" v-html="renderMath(question.explanation)"></div>
+        <div class="section-label-header" @click="showExplanation = !showExplanation">
+          <span class="section-label">解析</span>
+          <span class="toggle-link">
+            {{ showExplanation ? '折叠' : '点击查看解析' }}
+            <van-icon :name="showExplanation ? 'arrow-up' : 'arrow-down'" />
+          </span>
+        </div>
+        <div v-if="showExplanation" class="section-body explanation-content" v-html="renderMath(question.explanation)"></div>
       </div>
       
       <van-cell-group
@@ -126,6 +145,11 @@ const question = ref<Question | null>(null)
 const userRole = ref(localStorage.getItem('userRole') || 'student')
 const isStudent = computed(() => userRole.value === 'student')
 
+// 参考答案、解析与原图照片的展开/折叠状态，默认折叠防止作答前暴露笔记与答案
+const showAnswer = ref(false)
+const showExplanation = ref(false)
+const showImage = ref(false)
+
 const loadQuestion = async () => {
   try {
     const id = route.params.id as string
@@ -211,9 +235,25 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 600;
   color: #323233;
-  margin-bottom: 8px;
   border-left: 3px solid var(--van-primary-color, #1989fa);
   padding-left: 8px;
+}
+
+.section-label-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  padding-bottom: 4px;
+}
+
+.toggle-link {
+  font-size: 13px;
+  color: #1989fa;
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .section-body {
@@ -222,10 +262,26 @@ onMounted(() => {
   line-height: 1.65;
   word-break: break-word;
   overflow-x: auto;
+  margin-top: 8px;
 }
 
 .image-wrapper {
   margin-top: 12px;
+  border-top: 1px dashed #ebedf0;
+  padding-top: 10px;
+}
+
+.image-toggle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.image-toggle-text {
+  font-size: 13px;
+  color: #969799;
 }
 
 .actions {
