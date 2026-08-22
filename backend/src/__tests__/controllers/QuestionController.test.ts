@@ -138,6 +138,20 @@ describe('QuestionController', () => {
         expect.objectContaining({ status: 'success', message: expect.stringContaining('deleted') })
       )
     })
+    it('应该在删除题目时联动清理关联的插图文件', async () => {
+      const fs = require('fs')
+      const spyExists = jest.spyOn(fs, 'existsSync').mockReturnValue(true)
+      const spyUnlink = jest.spyOn(fs, 'unlinkSync').mockImplementation(() => {})
+      mockRepo.findOne.mockResolvedValue({ id: 'q1', diagramUrls: ['/uploads/diagrams/d1.png'] })
+      mockRepo.remove.mockResolvedValue(undefined)
+      const res = mockRes()
+      await controller.deleteQuestion(mockReq({}, { id: 'q1' }), res, mockNext)
+      expect(spyUnlink).toHaveBeenCalled()
+      spyExists.mockRestore()
+      spyUnlink.mockRestore()
+    })
+
+
 
     it('应该在题目不存在时返回 404', async () => {
       mockRepo.findOne.mockResolvedValue(null)

@@ -213,6 +213,22 @@ export class QuestionController {
         })
       }
 
+            if (question.diagramUrls && Array.isArray(question.diagramUrls)) {
+        const fs = require('fs')
+        const path = require('path')
+        for (const dUrl of question.diagramUrls) {
+          try {
+            const relativePath = dUrl.replace(/^\/uploads\//, '')
+            const fullPath = path.join(__dirname, '../../uploads', relativePath)
+            if (fs.existsSync(fullPath)) {
+              fs.unlinkSync(fullPath)
+            }
+          } catch (e) {
+            console.error('Failed to unlink diagram file:', e)
+          }
+        }
+      }
+
       await this.questionRepository.remove(question)
 
       res.json({

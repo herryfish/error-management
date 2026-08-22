@@ -37,6 +37,8 @@ export interface Question {
   imageUrl?: string
   /** 原始图片URL */
   originalImageUrl?: string
+  /** 独立插图URL列表 */
+  diagramUrls?: string[]
   /** 参考答案 */
   answer?: string
   /** 解析说明 */

@@ -24,6 +24,11 @@
       <div class="section-card">
         <div class="section-label">题目内容</div>
         <div class="section-body question-content" v-html="renderMath(question.content)"></div>
+        <div v-if="question.diagramUrls?.length" class="diagrams-wrapper" style="margin-top: 12px;">
+          <div v-for="(url, idx) in question.diagramUrls" :key="idx" class="diagram-item" style="margin-bottom: 8px;">
+            <van-image :src="url" width="100%" fit="contain" radius="6" />
+          </div>
+        </div>
         <div v-if="question.imageUrl" class="image-wrapper">
           <div class="image-toggle-header" @click="showImage = !showImage">
             <span class="image-toggle-text">原图照片（可能包含笔记/手写批改）</span>

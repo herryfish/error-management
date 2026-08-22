@@ -57,6 +57,9 @@ export class Question {
   @Column({ nullable: true })
   imageUrl: string
 
+  @Column('json', { nullable: true })
+  diagramUrls: string[]
+
   @Column({ nullable: true })
   originalImageUrl: string
 
