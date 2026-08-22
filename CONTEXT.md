@@ -8,6 +8,8 @@
 - **单题录入 (Single Question Entry)**：学生手动填写或单张图片识别录入独立一道错题的动作。
 - **整页/多题选择导入 (Multi-Question Batch Import)**：学生上传包含多道错题的整页试卷/作业照片，由系统识别定位多道题目区域，经学生确认/微调后批量创建错题的过程。
 - **题目识别区域/框 (Question Bounding Region)**：整页照片中独立题目所占用的几何二维区域空间。
+- **题目插图/题图 (Question Diagram)**：错题题干中所依赖的结构图形、函数图像或电路图，从全景照片中独立剪裁提取并以插图数组 (`diagramUrls`) 持久化。
+- **插图容错降级 (Diagram Fallback)**：当 Vision 大模型插图识别失败或坐标切割异常时，系统自动降级展示题目所在区域的局部原图。
 - **查重指纹 (Question Fingerprint)**：基于规范化文本提取的题目特征标识，用于判断错题是否重复。
 
 ## 2. 掌握与学习域 (Mastery & Learning Domain)
