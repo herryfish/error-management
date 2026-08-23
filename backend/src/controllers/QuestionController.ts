@@ -262,6 +262,9 @@ export class QuestionController {
         userId
       )
 
+      // 如果识别结果或容错规则要求图片，且无独立diagramUrls，默认将本题局部/拍照原图归入包含图片的列表
+      const diagramUrls = (identificationResult as any)?.diagramUrls || (imageUrl ? [imageUrl] : undefined)
+
       // Create question with identification results
       const question = this.questionRepository.create({
         title: identificationResult.title || 'Identified Question',
@@ -271,6 +274,7 @@ export class QuestionController {
         difficulty: identificationResult.difficulty || 1,
         knowledgePoints: identificationResult.knowledgePoints || [],
         imageUrl: imageUrl || undefined,
+        diagramUrls: diagramUrls,
         originalImageUrl: imageUrl || undefined,
         answer: identificationResult.answer,
         explanation: identificationResult.explanation,

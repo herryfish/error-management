@@ -92,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { masteryService } from '@/services/mastery'
 
@@ -104,13 +104,13 @@ const stats = ref({
   weakPoints: 0,
 })
 
-onMounted(async () => {
+const loadDashboardStats = async () => {
   const studentId = userStore.user?.studentId || userStore.user?.id
   if (studentId) {
     try {
       const masteryStats = await masteryService.getStats(studentId)
       stats.value = {
-        todayTasks: masteryStats.newQuestions + masteryStats.learningQuestions,
+        todayTasks: masteryStats.todayDueQuestions ?? (masteryStats.newQuestions + masteryStats.learningQuestions),
         masteryRate: masteryStats.masteryRate,
         weakPoints: masteryStats.learningQuestions,
       }
@@ -118,6 +118,14 @@ onMounted(async () => {
       console.error('Failed to load stats:', error)
     }
   }
+}
+
+watch(() => userStore.user, () => {
+  loadDashboardStats()
+}, { immediate: true })
+
+onMounted(async () => {
+  await loadDashboardStats()
 })
 </script>
 

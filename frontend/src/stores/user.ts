@@ -5,6 +5,12 @@ import { authService } from '@/services/auth'
 
 export const useUserStore = defineStore('user', () => {
   const user = ref<User | null>(null)
+  const savedUser = localStorage.getItem('user')
+  if (savedUser) {
+    try {
+      user.value = JSON.parse(savedUser)
+    } catch (e) { console.error(e) }
+  }
   const token = ref<string | null>(localStorage.getItem('token'))
   const loading = ref(false)
 
@@ -14,6 +20,7 @@ export const useUserStore = defineStore('user', () => {
   const setUser = (newUser: User) => {
     user.value = newUser as User
     localStorage.setItem('userRole', newUser.role)
+    localStorage.setItem('user', JSON.stringify(newUser))
   }
 
   const setToken = (newToken: string) => {
@@ -63,6 +70,7 @@ export const useUserStore = defineStore('user', () => {
     token.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('userRole')
+    localStorage.removeItem('user')
   }
 
   return {

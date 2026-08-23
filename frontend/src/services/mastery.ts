@@ -58,6 +58,8 @@ export interface MasteryStats {
   learningQuestions: number
   /** 新题目数 */
   newQuestions: number
+  /** 今日到期需要复习的题目数 */
+  todayDueQuestions?: number
   /** 掌握率 */
   masteryRate: number
 }
