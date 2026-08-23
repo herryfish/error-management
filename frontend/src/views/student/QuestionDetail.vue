@@ -25,7 +25,13 @@
         <div class="section-label">题目内容</div>
         <div class="section-body question-content" v-html="renderMath(question.content)"></div>
         <div v-if="question.diagramUrls?.length" class="diagrams-wrapper" style="margin-top: 12px;">
-          <div v-for="(url, idx) in question.diagramUrls" :key="idx" class="diagram-item" style="margin-bottom: 8px;">
+          <div v-for="(url, idx) in question.diagramUrls" :key="idx" class="diagram-item" style="margin-bottom: 8px; position: relative;">
+            <div class="diagram-tag-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 12px; color: #969799;">插图 {{ idx + 1 }}</span>
+              <van-tag :type="isDiagramFallback(url, question) ? 'default' : 'primary'" size="medium">
+                {{ isDiagramFallback(url, question) ? '局部原图 (已降级)' : '精细题图' }}
+              </van-tag>
+            </div>
             <van-image :src="url" width="100%" fit="contain" radius="6" />
           </div>
         </div>
@@ -154,6 +160,12 @@ const isStudent = computed(() => userRole.value === 'student')
 const showAnswer = ref(false)
 const showExplanation = ref(false)
 const showImage = ref(false)
+
+const isDiagramFallback = (diagramUrl: string, q: Question) => {
+  if (!diagramUrl) return true
+  if (q.imageUrl && diagramUrl === q.imageUrl) return true
+  return false
+}
 
 const loadQuestion = async () => {
   try {

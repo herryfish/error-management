@@ -197,6 +197,13 @@
                 title="识别可信度"
                 :value="`${((identifiedQuestion.confidence || 0) * 100).toFixed(0)}%`"
               />
+              <van-cell title="插图切割状态">
+                <template #value>
+                  <van-tag :type="(identifiedQuestion.diagramUrls?.length && identifiedQuestion.diagramUrls[0] !== identifiedQuestion.imageUrl) ? 'primary' : 'default'" size="medium">
+                    {{ (identifiedQuestion.diagramUrls?.length && identifiedQuestion.diagramUrls[0] !== identifiedQuestion.imageUrl) ? '精细题图' : '局部原图 (已降级)' }}
+                  </van-tag>
+                </template>
+              </van-cell>
               <van-field v-model="identifiedQuestion.title" label="标题" placeholder="校验修改标题..." />
               <van-field v-model="identifiedQuestion.content" type="textarea" rows="3" label="内容" placeholder="校验修改题目内容..." />
               <van-field v-model="identifiedQuestion.answer" type="textarea" rows="2" label="答案" placeholder="校验修改答案..." />
