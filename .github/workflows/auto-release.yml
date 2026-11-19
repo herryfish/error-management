@@ -1,192 +1,201 @@
 name: Auto Release
 
+# PR 合入 master 后自动发布：
+# 1. 若 PR 已显式修改根目录 package.json 的 version（与最新 tag 不一致），直接使用该版本发布；
+# 2. 否则按合入的提交信息推断 bump 类型（feat!:/BREAKING CHANGE → major，feat: → minor，其余 → patch）。
+# 发布内容：同步 root/backend/frontend 的 package.json 版本号 → 打 tag → 创建 GitHub Release。
 on:
-  push:
-    branches: [main]
+  pull_request:
     types: [closed]
+    branches: [master]
+
+permissions:
+  contents: write
 
 jobs:
   auto-release:
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
-    permissions:
-      contents: write
-      packages: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # PR closed 事件默认检出的是 refs/pull/<n>/merge，squash 合入后与 master 不同，
+          # 必须显式检出 master，才能基于合入后的真实历史打 tag。
+          ref: master
           fetch-depth: 0
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-      
-      - name: Determine version bump
+
+      - name: Determine version
         id: version
         run: |
-          # 获取最新的tag
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "Latest tag: $LATEST_TAG"
-          
-          # 分析提交信息决定版本号
-          COMMITS=$(git log $LATEST_TAG..HEAD --oneline)
-          echo "$COMMITS"
-          
-          # 检查是否有breaking change
-          if echo "$COMMITS" | grep -q "BREAKING CHANGE\|feat!:"; then
-            BUMP="major"
-          elif echo "$COMMITS" | grep -q "feat:"; then
-            BUMP="minor"
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Latest tag: ${LATEST_TAG:-none}"
+          echo "Current package.json version: $CURRENT_VERSION"
+
+          if [ -n "$LATEST_TAG" ] && [ "$CURRENT_VERSION" != "${LATEST_TAG#v}" ]; then
+            # PR 显式声明了待发布版本（如版本修整 PR），直接采用
+            NEW_VERSION="$CURRENT_VERSION"
+            echo "Release mode: declared by PR (package.json version)"
           else
-            BUMP="patch"
+            # 版本号与最新 tag 一致：按提交信息推断 bump 类型
+            if [ -n "$LATEST_TAG" ]; then
+              COMMITS=$(git log ${LATEST_TAG}..HEAD --oneline)
+            else
+              COMMITS=$(git log --oneline)
+            fi
+            echo "$COMMITS"
+
+            if echo "$COMMITS" | grep -q "BREAKING CHANGE\|feat!:"; then
+              BUMP="major"
+            elif echo "$COMMITS" | grep -q "feat:"; then
+              BUMP="minor"
+            else
+              BUMP="patch"
+            fi
+
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+            case "$BUMP" in
+              major)
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+              minor)
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              patch)
+                PATCH=$((PATCH + 1))
+                ;;
+            esac
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+            echo "Release mode: inferred bump ($BUMP)"
           fi
-          
-          echo "Version bump: $BUMP"
-          echo "bump=$BUMP" >> $GITHUB_OUTPUT
-      
-      - name: Bump version
-        id: bump
-        run: |
-          # 读取当前版本
-          CURRENT_VERSION=$(cat package.json | grep '"version"' | cut -d'"' -f4)
-          echo "Current version: $CURRENT_VERSION"
-          
-          # 解析版本号
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-          
-          # 根据bump类型更新版本
-          case "${{ steps.version.outputs.bump }}" in
-            major)
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            minor)
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            patch)
-              PATCH=$((PATCH + 1))
-              ;;
-          esac
-          
-          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+
+          if git rev-parse -q --verify "refs/tags/v$NEW_VERSION" >/dev/null; then
+            echo "::error::Tag v$NEW_VERSION 已存在，无法重复发布。请先调整 package.json 版本号。"
+            exit 1
+          fi
+
           echo "New version: $NEW_VERSION"
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-      
-      - name: Update version in package files
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Sync versions in package files
+        id: sync
         run: |
-          NEW_VERSION="${{ steps.bump.outputs.version }}"
-          
-          # 更新根目录package.json
-          if [ -f package.json ]; then
-            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" package.json
+          NEW_VERSION="${{ steps.version.outputs.version }}"
+
+          for f in package.json backend/package.json frontend/package.json; do
+            node -e "
+              const fs = require('fs');
+              const pkg = JSON.parse(fs.readFileSync('$f', 'utf8'));
+              pkg.version = '$NEW_VERSION';
+              fs.writeFileSync('$f', JSON.stringify(pkg, null, 2) + '\n');
+            "
+          done
+
+          # 同步根目录 package-lock.json 中记录的版本号，保证 npm ci 可用
+          node -e "
+            const fs = require('fs');
+            const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+            lock.version = '$NEW_VERSION';
+            if (lock.packages) {
+              for (const key of ['', 'backend', 'frontend']) {
+                if (lock.packages[key]) lock.packages[key].version = '$NEW_VERSION';
+              }
+            }
+            fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
+          "
+
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "版本号已是 $NEW_VERSION，无需提交"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat
           fi
-          
-          # 更新backend/package.json
-          if [ -f backend/package.json ]; then
-            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" backend/package.json
-          fi
-          
-          # 更新frontend/package.json
-          if [ -f frontend/package.json ]; then
-            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" frontend/package.json
-          fi
-      
+
       - name: Generate changelog
         id: changelog
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          
-          # 生成changelog
           if [ -n "$LATEST_TAG" ]; then
-            CHANGELOG=$(git log $LATEST_TAG..HEAD --pretty=format:"- %s" --no-merges)
+            RANGE="${LATEST_TAG}..HEAD"
           else
-            CHANGELOG=$(git log --pretty=format:"- %s" --no-merges)
+            RANGE="HEAD"
           fi
-          
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-      
-      - name: Create commit
+
+          {
+            echo "changelog<<CHANGELOG_EOF"
+            git log $RANGE --pretty=format:"- %s" --no-merges
+            echo ""
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Commit version bump
+        if: steps.sync.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          git add -A
-          git commit -m "chore: release v${{ steps.bump.outputs.version }}"
-      
+          git add package.json package-lock.json backend/package.json frontend/package.json
+          git commit -m "chore(release): v${{ steps.version.outputs.version }}"
+          git pull --rebase origin master
+          git push origin HEAD:master
+
       - name: Create tag
         run: |
-          git tag -a "v${{ steps.bump.outputs.version }}" -m "Release v${{ steps.bump.outputs.version }}"
-      
-      - name: Push changes
-        run: |
-          git push origin main
-          git push origin "v${{ steps.bump.outputs.version }}"
-      
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
+
       - name: Create GitHub Release
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.bump.outputs.version }}
-          release_name: Release v${{ steps.bump.outputs.version }}
-          body: |
-            ## Release v${{ steps.bump.outputs.version }}
-            
-            ### Changes
-            ${{ steps.changelog.outputs.changelog }}
-            
-            ### Installation
-            ```bash
-            git clone https://github.com/${{ github.repository }}.git
-            cd ${{ github.event.repository.name }}
-            docker-compose up -d
-            ```
-            
-            ### Docker
-            ```bash
-            docker pull ghcr.io/${{ github.repository }}:v${{ steps.bump.outputs.version }}
-            docker-compose up -d
-            ```
-          draft: false
-          prerelease: false
-      
-      - name: Build and push Docker images
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 构建并推送Docker镜像
-          echo "Building Docker images..."
-          
-          # 这里可以添加Docker构建和推送命令
-          # docker build -t ghcr.io/${{ github.repository }}:v${{ steps.bump.outputs.version }} .
-          # docker push ghcr.io/${{ github.repository }}:v${{ steps.bump.outputs.version }}
-      
-      - name: Notify completion
+          cat > release-notes.md <<'INSTALL_EOF'
+
+          ## 安装部署
+
+          ```bash
+          git clone --branch v${{ steps.version.outputs.version }} https://github.com/${{ github.repository }}.git
+          cd error-management
+          cp .env.example .env   # 配置数据库与 LLM API Key
+          docker compose up -d
+          ```
+
+          详细配置说明见 [README](https://github.com/${{ github.repository }}#readme)。
+          INSTALL_EOF
+
+          {
+            echo "## 更新内容"
+            echo ""
+            printf '%s\n' "${{ steps.changelog.outputs.changelog }}"
+            cat release-notes.md
+          } > release-notes-full.md
+
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --title "Release v${{ steps.version.outputs.version }}" \
+            --notes-file release-notes-full.md
+
+      - name: Notify merged PR
         uses: actions/github-script@v7
         with:
           script: |
-            var version = '${{ steps.bump.outputs.version }}';
-            var repoOwner = context.repo.owner;
-            var repoName = context.repo.repo;
-            var body = '## [Success] Release v' + version + ' 已发布！\n\n';
-            body += '### 发布内容\n';
-            body += '- 版本号: v' + version + '\n';
-            body += '- 变更日志: 已生成\n';
-            body += '- GitHub Release: 已创建\n';
-            body += '- Docker镜像: 已构建\n\n';
-            body += '### 访问链接\n';
-            body += '- Release: https://github.com/' + repoOwner + '/' + repoName + '/releases/tag/v' + version + '\n';
-            body += '- Docker: `docker pull ghcr.io/' + repoOwner + '/' + repoName + ':v' + version + '`\n\n';
-            body += '感谢您的贡献！[Success]';
-            
+            var version = '${{ steps.version.outputs.version }}';
+            var releaseUrl = context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/releases/tag/v' + version;
+            var body = '## ✅ Release v' + version + ' 已发布\n\n' +
+              '- GitHub Release: ' + releaseUrl + '\n' +
+              '- 版本号已同步至根目录、`backend/`、`frontend/` 的 `package.json`\n';
+
             await github.rest.issues.createComment({
-              owner: repoOwner,
-              repo: repoName,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
               body: body
             });
