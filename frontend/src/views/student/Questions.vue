@@ -7,6 +7,11 @@
     >
       <template #right>
         <van-icon
+          name="printer"
+          style="margin-right: 12px;"
+          @click="$router.push('/questions/export')"
+        />
+        <van-icon
           name="search"
           @click="showSearch = true"
         />

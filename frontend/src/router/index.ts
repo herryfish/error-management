@@ -43,6 +43,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/questions/export',
+    name: 'QuestionPaperExport',
+    component: () => import('@/views/student/QuestionPaperExport.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/redo/add/:questionId',
     name: 'AddRedo',
     component: () => import('@/views/student/Redo.vue'),
