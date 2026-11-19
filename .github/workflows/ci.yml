@@ -33,16 +33,14 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install & Lint Backend
-        run: |
-          cd backend
-          npm ci
-          npm run lint
+      - name: Install dependencies (npm workspaces)
+        run: npm ci
+
+      - name: Lint (backend + frontend)
+        run: npm run lint
 
       - name: Run Backend Tests
-        run: |
-          cd backend
-          npm test
+        run: npm run test
         env:
           DB_HOST: localhost
           DB_PORT: 3306
@@ -51,21 +49,8 @@ jobs:
           DB_DATABASE: error_management_test
           JWT_SECRET: test-secret
 
-      - name: Build Backend
-        run: |
-          cd backend
-          npm run build
-
-      - name: Install & Lint Frontend
-        run: |
-          cd frontend
-          npm ci
-          npm run lint
-
-      - name: Build Frontend
-        run: |
-          cd frontend
-          npm run build
+      - name: Build (backend + frontend)
+        run: npm run build
 
   deploy:
     runs-on: ubuntu-latest
