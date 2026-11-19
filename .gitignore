@@ -83,6 +83,11 @@ logs/
 uploads/*
 !uploads/.gitkeep
 
+# npm workspaces：唯一权威 lockfile 是根 package-lock.json（DC-481），
+# 子目录 lockfile 已删除不再维护，请勿在子目录单独 install 后提交
+backend/package-lock.json
+frontend/package-lock.json
+
 # Database
 *.sqlite
 *.sqlite3

@@ -110,7 +110,14 @@ npm run dev:frontend # 前端开发服务器 http://localhost:3001
 | `npm run format` | 前后端 Prettier 格式化 |
 | `npm run migrate` | 运行 TypeORM 数据库迁移 |
 
-也可以分别进入 `frontend/`、`backend/` 目录独立安装与开发（各自保留 `package-lock.json`）。
+也可以分别进入 `frontend/`、`backend/` 目录独立开发（直接运行其中的脚本即可）。
+
+> **依赖安装只支持根目录这一种方式（DC-481）**：唯一权威 lockfile 是根 `package-lock.json`，
+> `frontend/`、`backend/` 下的子 lockfile 已移除，请勿在子目录单独执行 `npm install` / `npm ci`
+> （npm 会向上找到 workspace 根，请始终在仓库根执行）。生产镜像同理：`backend/Dockerfile`、
+> `frontend/Dockerfile` 均以仓库根为 build context、在容器内走根 workspace 自构建，
+> 新 clone 后 `docker compose build` 即可完整构建前后端镜像（CI 的 docker-build job
+> 每次验证该路径）。
 
 ### 数据库
 
