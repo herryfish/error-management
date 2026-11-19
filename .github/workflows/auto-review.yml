@@ -85,6 +85,11 @@ jobs:
           PR_NUMBER="${{ github.event.pull_request.number }}"
           PR_TITLE="${{ github.event.pull_request.title }}"
           PR_BODY="${{ github.event.pull_request.body }}"
+
+          # 标题/描述是外部输入：转义反引号与 $，防止下方未加引号的 heredoc 展开时
+          # 被当作命令替换执行（含代码片段的 PR 描述曾导致本工作流失败）
+          PR_TITLE=$(printf '%s' "$PR_TITLE" | sed -e 's/`/\\`/g' -e 's/\$/\\$/g')
+          PR_BODY=$(printf '%s' "$PR_BODY" | sed -e 's/`/\\`/g' -e 's/\$/\\$/g')
           
           # 读取分析报告
           ANALYSIS_REPORT=""
