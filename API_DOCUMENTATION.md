@@ -21,6 +21,7 @@
 9. [变更流程 API](#变更流程-api)
 10. [监控 API](#监控-api)
 11. [管理员 API](#管理员-api)
+12. [引导提示 API](#引导提示-api-v1-4)
 
 ---
 
@@ -953,6 +954,57 @@ Authorization: Bearer <token>
 }
 ```
 
+### GET /api/mastery/student/:studentId/stubborn（v1.4）
+
+获取顽固薄弱点列表（累计做错 ≥ 阈值且未掌握的错题，按错误次数降序；学生首页置顶 / 薄弱点画像页）
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "id": "uuid",
+      "incorrectCount": 4,
+      "isStubborn": true,
+      "stubbornMarkedAt": "timestamp",
+      "question": {
+        "id": "uuid",
+        "title": "string"
+      }
+    }
+  ]
+}
+```
+
+### GET /api/mastery/config（v1.4）
+
+复习调度器配置：轮次总数/间隔表由接口下发，学生端展示口径随配置渲染（前端不再双份硬编码）
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "data": {
+    "scheduler": "ebbinghaus",
+    "totalRungs": 5,
+    "intervals": [1, 2, 4, 7, 15]
+  }
+}
+```
+
+> `scheduler` 取值 `ebbinghaus`（静态艾宾浩斯间隔表，默认）或 `fsrs`（按 DSR 记忆状态动态排程，间隔逐题计算；此时 `intervals` 仅作展示口径）。
+
 ---
 
 ## 相似题 API
@@ -1733,3 +1785,42 @@ Authorization: Bearer <token>
   ]
 }
 ```
+
+---
+
+## 引导提示 API（v1.4）
+
+### POST /api/guidance
+
+获取阶梯式引导提示（检索练习防剧透）：按 1/2/3 级渐进生成——① 考点方向（不含公式）→ ② 思路台阶（不含方程）→ ③ 关键方程（不含最终答案）；调用按 guidance 场景记账。需本人学生身份。
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "questionId": "uuid",
+  "level": 1
+}
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "data": {
+    "level": 1,
+    "hint": "本题考查……（不超过 100 字，不含公式）",
+    "nextLevel": 2
+  }
+}
+```
+
+**错误响应**:
+
+- `400` - level 不在 1–3 范围
+- `404` - 题目不存在
+- `502` - LLM 生成失败（前端提示稍后重试，不静默兑底泄露解析）

@@ -13,10 +13,11 @@
  */
 
 import { Request, Response, NextFunction } from 'express'
+import { Not } from 'typeorm'
 import { AppDataSource } from '../config/database'
 import { Mastery, MasteryStatus } from '../models/Mastery'
 import { resolveStudentUserId } from '../utils/resolveStudentUserId'
-import { applyReviewResult, startOfToday, endOfToday } from '../services/ReviewScheduler'
+import { applyScheduledReview, startOfToday, endOfToday, getSchedulerMode, EBBINGHAUS_TOTAL_RUNGS, EBBINGHAUS_INTERVALS } from '../services/ReviewScheduler'
 
 /**
  * 掌握状态控制器类
@@ -156,8 +157,8 @@ export class MasteryController {
         })
       }
 
-      // Update mastery based on review result (艾宾浩斯间隔调度：第 1/2/4/7/15 天)
-      applyReviewResult(mastery, isCorrect)
+      // Update mastery based on review result（调度器统一入口：默认艾宾浩斯，REVIEW_SCHEDULER=fsrs 时切换 FSRS 动态调度）
+      applyScheduledReview(mastery, isCorrect)
 
       await this.masteryRepository.save(mastery)
 
@@ -276,6 +277,15 @@ export class MasteryController {
         )
         .getCount()
 
+      // 顽固薄弱点数：累计做错 ≥ 阈值自动打标且未掌握（学生首页置顶展示）
+      const stubbornQuestions = await this.masteryRepository.count({
+        where: {
+          studentId: resolvedStudentId,
+          isStubborn: true,
+          status: Not(MasteryStatus.MASTERED),
+        },
+      })
+
       res.json({
         status: 'success',
         data: {
@@ -284,6 +294,7 @@ export class MasteryController {
           learningQuestions,
           newQuestions,
           todayDueQuestions,
+          stubbornQuestions,
           masteryRate:
             totalQuestions > 0
               ? Math.round((masteredQuestions / totalQuestions) * 100)
@@ -312,6 +323,64 @@ export class MasteryController {
       res.json({
         status: 'success',
         data: masteryRecords,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * 复习调度器配置：轮次总数/间隔表由接口下发，消除前后端常量双份（S3）
+   * GET /api/mastery/config
+   */
+  getSchedulerConfig = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      res.json({
+        status: 'success',
+        data: {
+          scheduler: getSchedulerMode(),
+          totalRungs: EBBINGHAUS_TOTAL_RUNGS,
+          intervals: EBBINGHAUS_INTERVALS,
+        },
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * 顽固薄弱点列表：累计做错 ≥ 阈值自动打标且未掌握的题目
+   * （学生首页置顶 + 家长周报提示线下定向补课，避免系统内机械重试）
+   */
+  getStubbornQuestions = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { studentId } = req.params
+      // 口径归一：接受 students.id 或 users.id（评审 C1）
+      const resolvedStudentId = await resolveStudentUserId(studentId)
+
+      const stubbornRecords = await this.masteryRepository.find({
+        where: {
+          studentId: resolvedStudentId,
+          isStubborn: true,
+        },
+        relations: ['question'],
+        order: { incorrectCount: 'DESC' },
+      })
+
+      // 已掌握的顽固题（曾打标后毕业）不再预警
+      const data = stubbornRecords.filter((m) => m.status !== MasteryStatus.MASTERED)
+
+      res.json({
+        status: 'success',
+        data,
       })
     } catch (error) {
       next(error)

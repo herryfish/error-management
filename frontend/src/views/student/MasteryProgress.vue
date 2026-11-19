@@ -48,8 +48,8 @@
         v-for="r in records"
         :key="r.id"
         :title="statusText(r.status)"
-        :label="`正确 ${r.correctCount} 次 · 错误 ${r.incorrectCount} 次`"
-        :value="r.status === 'mastered' ? '已掌握' : r.status === 'learning' ? r.intervalLevel > 0 ? `间隔复习 ${r.intervalLevel}/5 轮` : '学习中新错题' : '新题'"
+        :label="`正确 ${r.correctCount} 次 · 错误 ${r.incorrectCount} 次${r.scheduledDays ? ' · 下次间隔 ' + r.scheduledDays + ' 天' : ''}`"
+        :value="r.status === 'mastered' ? '已掌握' : r.status === 'learning' ? r.intervalLevel > 0 ? `间隔复习 ${Math.min(r.intervalLevel, totalRungs)}/${totalRungs} 轮` : '学习中新错题' : '新题'"
       />
     </van-cell-group>
   </div>
@@ -63,6 +63,8 @@ import { masteryService, type Mastery, type MasteryStats } from '@/services/mast
 const userStore = useUserStore()
 const stats = ref<MasteryStats>({ totalQuestions: 0, masteredQuestions: 0, learningQuestions: 0, newQuestions: 0, masteryRate: 0 })
 const records = ref<Mastery[]>([])
+// 展示口径总轮次由接口下发（S3），拉取失败回退 5
+const totalRungs = ref(5)
 
 const statusText = (s: string) => ({ new: '新题', learning: '学习中', mastered: '已掌握' }[s] || s)
 
@@ -77,5 +79,8 @@ onMounted(async () => {
     stats.value = s
     records.value = r
   } catch (e) { console.error(e) }
+  try {
+    totalRungs.value = (await masteryService.getSchedulerConfig()).totalRungs
+  } catch { /* 回退本地默认 5 */ }
 })
 </script>

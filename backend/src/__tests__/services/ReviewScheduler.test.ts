@@ -3,6 +3,8 @@ import {
   EBBINGHAUS_TOTAL_RUNGS,
   EBBINGHAUS_MASTERY_LEVEL,
   applyReviewResult,
+  applyAssistedReviewResult,
+  markStubbornIfNeeded,
   isReviewDue,
   addDays,
   startOfToday,
@@ -16,6 +18,7 @@ const createMastery = (overrides: Partial<Mastery> = {}): Mastery => {
   m.correctCount = 0
   m.incorrectCount = 0
   m.intervalLevel = 0
+  m.isStubborn = false
   return Object.assign(m, overrides)
 }
 
@@ -130,6 +133,54 @@ describe('ReviewScheduler（艾宾浩斯间隔调度）', () => {
     })
   })
 
+  describe('查看完整解析兑底（assisted）语义', () => {
+    it('assisted 轮次：不推进轮次、不计连对，明日同轮重试', () => {
+      const m = createMastery()
+      applyReviewResult(m, true, BASE)
+      applyReviewResult(m, true, new Date(m.nextReviewDate!.getTime()))
+      expect(m.intervalLevel).toBe(2)
+      expect(m.correctCount).toBe(2)
+
+      const assistedAt = new Date(m.nextReviewDate!.getTime())
+      applyAssistedReviewResult(m, assistedAt)
+
+      // 未独立掌握：轮次与连对保持原状，仅重排为明天重试
+      expect(m.status).toBe(MasteryStatus.LEARNING)
+      expect(m.intervalLevel).toBe(2)
+      expect(m.correctCount).toBe(2)
+      expect(m.nextReviewDate!.getTime()).toBe(addDays(assistedAt, 1).getTime())
+      expect(m.lastReviewDate!.getTime()).toBe(assistedAt.getTime())
+    })
+
+    it('assisted 不清零已有进度也不触发顽固标记', () => {
+      const m = createMastery({ incorrectCount: 2 })
+      applyReviewResult(m, true, BASE)
+      expect(m.isStubborn).toBe(false)
+      applyAssistedReviewResult(m, BASE)
+      expect(m.isStubborn).toBe(false)
+    })
+
+    it('已掌握题目 assisted 不降级：保持 MASTERED 与原 nextReviewDate（评审 S2）', () => {
+      const m = createMastery()
+      // 连对走完艾宾浩斯轮次（达 EBBINGHAUS_MASTERY_LEVEL=6）→ 已掌握
+      let t = BASE
+      for (let i = 0; i < EBBINGHAUS_MASTERY_LEVEL; i++) {
+        applyReviewResult(m, true, t)
+        if (m.status === MasteryStatus.MASTERED) break
+        t = new Date(m.nextReviewDate!.getTime())
+      }
+      expect(m.status).toBe(MasteryStatus.MASTERED)
+      const masteredNext = m.nextReviewDate
+
+      const assistedAt = new Date(t.getTime() + 86400000)
+      applyAssistedReviewResult(m, assistedAt)
+      // 仅记录查看时间，不降级、不重排复习
+      expect(m.status).toBe(MasteryStatus.MASTERED)
+      expect(m.nextReviewDate).toBe(masteredNext)
+      expect(m.lastReviewDate!.getTime()).toBe(assistedAt.getTime())
+    })
+  })
+
   describe('时间工具', () => {
     it('startOfToday / endOfToday 覆盖整天', () => {
       const s = startOfToday(BASE)
@@ -137,6 +188,31 @@ describe('ReviewScheduler（艾宾浩斯间隔调度）', () => {
       expect(s.getHours()).toBe(0)
       expect(e.getHours()).toBe(23)
       expect(e.getTime() - s.getTime()).toBe(24 * 3600 * 1000 - 1)
+    })
+  })
+
+  describe('顽固薄弱点标记（静态艾宾浩斯路径）', () => {
+    it('累计做错达阈值（默认 3 次）自动打标，首次打标时间记入 stubbornMarkedAt', () => {
+      const m = createMastery()
+      applyReviewResult(m, false, BASE)
+      applyReviewResult(m, false, BASE)
+      expect(m.isStubborn).toBe(false)
+      applyReviewResult(m, false, BASE)
+      expect(m.isStubborn).toBe(true)
+      expect(m.stubbornMarkedAt!.getTime()).toBe(BASE.getTime())
+    })
+
+    it('已掌握状态不触发顽固标记（直接标记函数语义）', () => {
+      const m = createMastery({ status: MasteryStatus.MASTERED, incorrectCount: 5 })
+      markStubbornIfNeeded(m, BASE)
+      expect(m.isStubborn).toBe(false)
+    })
+
+    it('已掌握的题目复习做错 → 回到学习态，累计错误达阈值则重新打标', () => {
+      const m = createMastery({ status: MasteryStatus.MASTERED, incorrectCount: 2 })
+      applyReviewResult(m, false, BASE)
+      expect(m.status).toBe(MasteryStatus.LEARNING)
+      expect(m.isStubborn).toBe(true)
     })
   })
 })

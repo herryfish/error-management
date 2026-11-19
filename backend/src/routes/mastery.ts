@@ -12,6 +12,10 @@ router.use(authenticate)
 router.get('/student/:studentId', masteryController.getMasteryByStudent)
 router.get('/student/:studentId/queue', masteryController.getReviewQueue)
 router.get('/student/:studentId/stats', masteryController.getMasteryStats)
+// 顽固薄弱点列表（学生首页置顶 / 家长周报提示）
+router.get('/student/:studentId/stubborn', masteryController.getStubbornQuestions)
+// 复习调度器配置：轮次总数/间隔表接口下发（S3）
+router.get('/config', masteryController.getSchedulerConfig)
 
 // Question-specific routes
 router.get('/question/:questionId', masteryController.getMasteryByQuestion)

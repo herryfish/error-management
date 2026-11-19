@@ -27,6 +27,25 @@
     </van-nav-bar>
     
     <van-cell-group inset>
+      <!-- 顽固薄弱点置顶：累计做错 ≥ 3 次且未掌握，提示线下定向补课避免机械重试 -->
+      <van-cell
+        v-if="stats.stubbornQuestions > 0"
+        title="⚠️ 顽固薄弱点"
+        is-link
+        :value="`${stats.stubbornQuestions}个待突破`"
+        @click="$router.push('/reports/weakness')"
+      >
+        <template #label>
+          <span style="color: #ee0a24; font-size: 12px;">反复做错，建议对照教材或找老师定向补课</span>
+        </template>
+        <template #icon>
+          <van-icon
+            name="warning-o"
+            color="#ee0a24"
+            style="margin-right: 8px; align-self: center;"
+          />
+        </template>
+      </van-cell>
       <van-cell
         title="今日待复习"
         is-link
@@ -110,6 +129,7 @@ const stats = ref({
   todayTasks: 0,
   masteryRate: 0,
   weakPoints: 0,
+  stubbornQuestions: 0,
 })
 
 const loadDashboardStats = async () => {
@@ -121,6 +141,7 @@ const loadDashboardStats = async () => {
         todayTasks: masteryStats.todayDueQuestions ?? (masteryStats.newQuestions + masteryStats.learningQuestions),
         masteryRate: masteryStats.masteryRate,
         weakPoints: masteryStats.learningQuestions,
+        stubbornQuestions: masteryStats.stubbornQuestions ?? 0,
       }
     } catch (error) {
       console.error('Failed to load stats:', error)

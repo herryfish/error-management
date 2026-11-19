@@ -9,6 +9,7 @@ import { connectDatabase } from './config/database'
 import { errorHandler } from './middleware/errorHandler'
 import { notFound } from './middleware/notFound'
 import { identificationTaskManager } from './services/tasks/IdentificationTaskManager'
+import { uploadsCleanupService } from './services/UploadsCleanupService'
 
 // Routes
 import authRoutes from './routes/auth'
@@ -17,6 +18,7 @@ import questionRoutes from './routes/questions'
 import redoRoutes from './routes/redos'
 import masteryRoutes from './routes/mastery'
 import similarRoutes from './routes/similar'
+import guidanceRoutes from './routes/guidance'
 import reportRoutes from './routes/reports'
 import llmRoutes from './routes/llm'
 import adminRoutes from './routes/admin'
@@ -63,6 +65,7 @@ app.use('/api/questions', questionRoutes)
 app.use('/api/redos', redoRoutes)
 app.use('/api/mastery', masteryRoutes)
 app.use('/api/similar', similarRoutes)
+app.use('/api/guidance', guidanceRoutes)
 app.use('/api/reports', reportRoutes)
 app.use('/api/llm', llmRoutes)
 app.use('/api/admin', adminRoutes)
@@ -79,6 +82,8 @@ const startServer = async () => {
     await connectDatabase()
     // 启动整页多题识别异步任务队列（REDIS_URL 未配置时自动降级为进程内队列）
     identificationTaskManager.init()
+    // 启动 uploads 识别临时图 TTL 清理（UPLOADS_TTL_HOURS=0 时关闭）
+    uploadsCleanupService.init()
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`)
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
@@ -97,6 +102,7 @@ const shutdown = async (signal: string) => {
   } catch (e) {
     console.error('Error during task manager shutdown:', e)
   }
+  uploadsCleanupService.close()
   process.exit(0)
 }
 process.on('SIGTERM', () => shutdown('SIGTERM'))

@@ -16,7 +16,7 @@
       <van-cell-group
         v-else
         inset
-        title="按艾宾浩斯间隔（第1/2/4/7/15天）到期"
+        :title="queueTitle"
       > 
         <van-cell
           v-for="item in tasks"
@@ -38,12 +38,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { masteryService, type Mastery } from '@/services/mastery'
+import { masteryService, type Mastery, type SchedulerConfig } from '@/services/mastery'
 
-const EBBINGHAUS_TOTAL_RUNGS = 5
-const totalRungs = EBBINGHAUS_TOTAL_RUNGS
+// 调度器配置（S3：轮次总数由接口下发，消除前后端常量双份；拉取失败回退本地默认）
+const schedulerConfig = ref<SchedulerConfig>({
+  scheduler: 'ebbinghaus',
+  totalRungs: 5,
+  intervals: [1, 2, 4, 7, 15],
+})
+const totalRungs = computed(() => schedulerConfig.value.totalRungs)
+const queueTitle = computed(() =>
+  schedulerConfig.value.scheduler === 'fsrs'
+    ? '按 FSRS 记忆模型到期（第 N/5 轮为展示口径，间隔由记忆状态动态计算）'
+    : `按艾宾浩斯间隔（第${schedulerConfig.value.intervals.join('/')}天）到期`
+)
 
 const userStore = useUserStore()
 const loading = ref(false)
@@ -52,6 +62,11 @@ const tasks = ref<Mastery[]>([])
 const loadData = async () => {
   loading.value = true
   try {
+    try {
+      schedulerConfig.value = await masteryService.getSchedulerConfig()
+    } catch {
+      schedulerConfig.value = { scheduler: 'ebbinghaus', totalRungs: 5, intervals: [1, 2, 4, 7, 15] }
+    }
     const studentId = userStore.user?.studentId || userStore.user?.id
     if (studentId) {
       tasks.value = await masteryService.getReviewQueue(studentId)

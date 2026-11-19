@@ -23,6 +23,19 @@ export const EBBINGHAUS_TOTAL_RUNGS = EBBINGHAUS_INTERVALS.length
 /** 掌握阈值：intervalLevel 达到「轮次数 + 1」表示第 5 轮（15 天间隔）复习已做对 */
 export const EBBINGHAUS_MASTERY_LEVEL = EBBINGHAUS_TOTAL_RUNGS + 1
 
+/** 顽固薄弱点阈值：累计做错 ≥ 该次数自动打「顽固薄弱点」标记（`STUBBORN_INCORRECT_THRESHOLD` 可配） */
+export const STUBBORN_INCORRECT_THRESHOLD = (() => {
+  const n = parseInt(process.env.STUBBORN_INCORRECT_THRESHOLD || '3', 10)
+  return Number.isFinite(n) && n > 0 ? n : 3
+})()
+
+/** 复习调度器模式：fsrs（动态自适应）| ebbinghaus（静态 1/2/4/7/15 回退），`REVIEW_SCHEDULER` 可配 */
+export type SchedulerMode = 'fsrs' | 'ebbinghaus'
+
+export function getSchedulerMode(): SchedulerMode {
+  return (process.env.REVIEW_SCHEDULER || '').toLowerCase() === 'fsrs' ? 'fsrs' : 'ebbinghaus'
+}
+
 export function addDays(base: Date, days: number): Date {
   const d = new Date(base.getTime())
   d.setDate(d.getDate() + days)
@@ -57,6 +70,19 @@ export function isReviewDue(mastery: {
     return new Date(mastery.nextReviewDate).getTime() <= endOfToday(now).getTime()
   }
   return !!mastery.createdAt && new Date(mastery.createdAt).getTime() < startOfToday(now).getTime()
+}
+
+/**
+ * 顽固薄弱点标记：累计做错达到阈值且未掌握时自动打标（学生首页置顶 + 家长周报提示线下定向补课）。
+ * 首次标记时间记入 stubbornMarkedAt，之后复习不再刷新。
+ */
+export function markStubbornIfNeeded(mastery: Mastery, now: Date = new Date()): Mastery {
+  if (mastery.status === MasteryStatus.MASTERED) return mastery
+  if ((mastery.incorrectCount || 0) >= STUBBORN_INCORRECT_THRESHOLD && !mastery.isStubborn) {
+    mastery.isStubborn = true
+    mastery.stubbornMarkedAt = now
+  }
+  return mastery
 }
 
 /**
@@ -102,5 +128,55 @@ export function applyReviewResult(
     mastery.nextReviewDate = addDays(now, EBBINGHAUS_INTERVALS[0])
   }
 
+  markStubbornIfNeeded(mastery, now)
   return mastery
+}
+
+/**
+ * 将一次「查看完整解析兑底」的重做结果应用到掌握记录（原地修改）。
+ *
+ * 语义（DC-468 P2 检索练习防剧透）：完整解析使检索难度降为 0，本轮判定
+ * 「未独立掌握」——不计入连对、不推进轮次、不更新 FSRS 记忆状态，
+ * 次日同轮重试（保持当前轮次与间隔计划重排为明天）。
+ *
+ * @param mastery 掌握记录实体
+ * @param now 重做发生时间（默认当前时间）
+ */
+export function applyAssistedReviewResult(
+  mastery: Mastery,
+  now: Date = new Date()
+): Mastery {
+  mastery.lastReviewDate = now
+  // 已掌握题目不降级：assisted 语义是「本轮未独立掌握」，不应追溯剥夺既有毕业
+  // 状态（评审 S2）——保持 MASTERED 及原 nextReviewDate，仅记录本次查看时间
+  if (mastery.status !== MasteryStatus.MASTERED) {
+    mastery.status = MasteryStatus.LEARNING
+    mastery.nextReviewDate = addDays(now, 1)
+  }
+  return mastery
+}
+
+/**
+ * 按 `REVIEW_SCHEDULER` 配置将一次复习结果应用到掌握记录（调度器统一入口）。
+ *
+ * - ebbinghaus（默认）：静态艾宾浩斯 1/2/4/7/15 天间隔表；
+ * - fsrs：FSRS 动态自适应调度（见 FsrsScheduler），按 `REVIEW_SCHEDULER=fsrs` 启用。
+ *
+ * 两处调用点（MasteryController 独立打卡 / RedoController 重做联动）必须经由本入口，
+ * 保证切换调度器时全系统行为一致。
+ */
+export function applyScheduledReview(
+  mastery: Mastery,
+  isCorrect: boolean,
+  now: Date = new Date()
+): Mastery {
+  // 延迟 require 避免循环依赖（FsrsScheduler 复用了本模块的工具函数）
+  if (getSchedulerMode() === 'fsrs') {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { applyFsrsReviewResult } = require('./FsrsScheduler') as {
+      applyFsrsReviewResult: typeof import('./FsrsScheduler').applyFsrsReviewResult
+    }
+    return applyFsrsReviewResult(mastery, isCorrect, now)
+  }
+  return applyReviewResult(mastery, isCorrect, now)
 }

@@ -48,6 +48,8 @@ export interface CreateRedoRequest {
   questionId: string
   /** 答案 */
   answer: string
+  /** 是否查看过完整解析兑底：本轮判定未独立掌握，不推进掌握轮次（阶梯提示 P2） */
+  assisted?: boolean
 }
 
 /**
