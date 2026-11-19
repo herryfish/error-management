@@ -1,6 +1,6 @@
 {
   "name": "error-management",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "中小学数理化学生错题管理系统（K12 错题本）：拍照录入、LLM 切题识别、重做掌握跟踪、家长周报",
   "license": "MIT",
