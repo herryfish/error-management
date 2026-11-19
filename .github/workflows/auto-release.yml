@@ -11,6 +11,9 @@ on:
 
 permissions:
   contents: write
+  # 发布完成后向被合入的 PR 发通知评论（issues API）需要此权限，
+  # 首次真实运行（v1.2.0 发布）因缺此权限报 403，主体发布不受影响
+  pull-requests: write
 
 jobs:
   auto-release:
