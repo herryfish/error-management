@@ -83,6 +83,18 @@ export interface MasteryStats {
 }
 
 /**
+ * 复习调度器配置接口
+ */
+export interface SchedulerConfig {
+  /** 调度器模式（ebbinghaus/fsrs） */
+  scheduler: 'ebbinghaus' | 'fsrs'
+  /** 展示口径总轮次（静态表轮次数，学生端「第 N/totalRungs 轮」） */
+  totalRungs: number
+  /** 静态间隔表（天），fsrs 模式仅作展示口径 */
+  intervals: number[]
+}
+
+/**
  * 掌握状态服务
  * 
  * 提供掌握状态相关的API接口
@@ -133,9 +145,16 @@ export const masteryService = {
     return response.data
   },
 
-  /** 顽固薄弱点列表（学生首页置顶 / 家长周报提示线下定向补课） */
+  /**
+   * 顽固薄弱点列表（学生首页置顶 / 家长周报提示线下定向补课） */
   async getStubborn(studentId: string): Promise<Mastery[]> {
     const response = await api.get(`/mastery/student/${studentId}/stubborn`)
+    return response.data
+  },
+
+  /** 调度器配置：轮次总数由接口下发，消除前后端常量双份（S3） */
+  async getSchedulerConfig(): Promise<SchedulerConfig> {
+    const response = await api.get('/mastery/config')
     return response.data
   },
 

@@ -123,6 +123,23 @@ describe('MasteryController', () => {
     })
   })
 
+  describe('getSchedulerConfig（S3 轮次总数接口下发）', () => {
+    it('返回调度器模式、展示口径总轮次与间隔表', async () => {
+      const res = mockRes()
+      await controller.getSchedulerConfig(mockReq(), res, mockNext)
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'success',
+          data: {
+            scheduler: 'ebbinghaus',
+            totalRungs: 5,
+            intervals: [1, 2, 4, 7, 15],
+          },
+        })
+      )
+    })
+  })
+
   describe('getMasteryStats 顽固薄弱点计数', () => {
     it('统计结果应包含 stubbornQuestions 字段', async () => {
       const mockMastery = (controller as any).masteryRepository

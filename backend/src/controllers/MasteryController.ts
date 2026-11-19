@@ -17,7 +17,7 @@ import { Not } from 'typeorm'
 import { AppDataSource } from '../config/database'
 import { Mastery, MasteryStatus } from '../models/Mastery'
 import { resolveStudentUserId } from '../utils/resolveStudentUserId'
-import { applyScheduledReview, startOfToday, endOfToday } from '../services/ReviewScheduler'
+import { applyScheduledReview, startOfToday, endOfToday, getSchedulerMode, EBBINGHAUS_TOTAL_RUNGS, EBBINGHAUS_INTERVALS } from '../services/ReviewScheduler'
 
 /**
  * 掌握状态控制器类
@@ -323,6 +323,29 @@ export class MasteryController {
       res.json({
         status: 'success',
         data: masteryRecords,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * 复习调度器配置：轮次总数/间隔表由接口下发，消除前后端常量双份（S3）
+   * GET /api/mastery/config
+   */
+  getSchedulerConfig = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      res.json({
+        status: 'success',
+        data: {
+          scheduler: getSchedulerMode(),
+          totalRungs: EBBINGHAUS_TOTAL_RUNGS,
+          intervals: EBBINGHAUS_INTERVALS,
+        },
       })
     } catch (error) {
       next(error)
