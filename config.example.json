@@ -9,7 +9,7 @@
   "llm": {
     "primary": {
       "provider": "openai",
-      "model": "gpt-4-vision-preview",
+      "model": "gpt-4o-mini",
       "apiKey": "sk-your-openai-api-key",
       "apiBase": "https://api.openai.com/v1"
     },

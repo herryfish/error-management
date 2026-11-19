@@ -71,7 +71,7 @@ interface LLMConfig {
 ```env
 # 主LLM配置
 LLM_PRIMARY_PROVIDER=openai
-LLM_PRIMARY_MODEL=gpt-4-vision-preview
+LLM_PRIMARY_MODEL=gpt-4o-mini
 LLM_PRIMARY_API_KEY=sk-xxx
 LLM_PRIMARY_API_BASE=https://api.openai.com/v1
 
@@ -104,7 +104,7 @@ LLM_FALLBACK_TIMEOUT_MS=30000
   "llm": {
     "primary": {
       "provider": "openai",
-      "model": "gpt-4-vision-preview",
+      "model": "gpt-4o-mini",
       "apiKey": "sk-xxx",
       "apiBase": "https://api.openai.com/v1"
     },
@@ -321,7 +321,7 @@ services:
     image: error-management-backend
     environment:
       - LLM_PRIMARY_PROVIDER=openai
-      - LLM_PRIMARY_MODEL=gpt-4-vision-preview
+      - LLM_PRIMARY_MODEL=gpt-4o-mini
       - LLM_PRIMARY_API_KEY=${LLM_PRIMARY_API_KEY}
       - LLM_PRIMARY_API_BASE=https://api.openai.com/v1
       - LLM_FALLBACK_PROVIDER=anthropic
@@ -417,7 +417,7 @@ volumes:
 
 1. **白名单定义**：
    - 系统定义预设模型白名单，按能力分类：
-     - **视觉/通用模型 (Vision/Multimodal)**：`gpt-4o`, `gpt-4-vision-preview`, `claude-3-5-sonnet-20240620`, `sensenova-6.7-flash-lite`。
+     - **视觉/通用模型 (Vision/Multimodal)**：`gpt-4o`, `gpt-4o-mini`, `claude-3-5-sonnet-20240620`, `sensenova-6.7-flash-lite`（注：`gpt-4-vision-preview` 已被 OpenAI 退役，不再推荐）。
      - **纯文本/高推理模型 (Text/Reasoning)**：`gpt-4o-mini`, `gpt-3.5-turbo`, `deepseek-r1`, `deepseek-chat`, `claude-3-haiku-20240307`。
 2. **场景差异化限定 (Scene-Model Binding)**：
    - **错题识别场景 (`recognition`)**：仅允许在具备视觉能力的模型白名单中进行下拉选择。
