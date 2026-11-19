@@ -49,7 +49,7 @@
         :key="r.id"
         :title="statusText(r.status)"
         :label="`正确 ${r.correctCount} 次 · 错误 ${r.incorrectCount} 次${r.scheduledDays ? ' · 下次间隔 ' + r.scheduledDays + ' 天' : ''}`"
-        :value="r.status === 'mastered' ? '已掌握' : r.status === 'learning' ? r.intervalLevel > 0 ? `间隔复习 ${r.intervalLevel}/${totalRungs} 轮` : '学习中新错题' : '新题'"
+        :value="r.status === 'mastered' ? '已掌握' : r.status === 'learning' ? r.intervalLevel > 0 ? `间隔复习 ${Math.min(r.intervalLevel, totalRungs)}/${totalRungs} 轮` : '学习中新错题' : '新题'"
       />
     </van-cell-group>
   </div>

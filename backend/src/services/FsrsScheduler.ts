@@ -34,6 +34,8 @@ import {
   type CardInput,
   type FSRSParameters,
 } from 'ts-fsrs'
+// 注：锁定 ts-fsrs@5.1.0（engines node>=18 与 Dockerfile/CI 的 node:18 契约一致；
+// v6.0 声明 node>=24 属 off-contract 运行，评审 S1 结论）
 import { Mastery, MasteryStatus } from '../models/Mastery'
 import { addDays, markStubbornIfNeeded } from './ReviewScheduler'
 
@@ -84,10 +86,16 @@ function toFsrsCard(mastery: Mastery, now: Date): CardInput {
     !!mastery.lastIncorrectDate &&
     (!mastery.lastCorrectDate || mastery.lastIncorrectDate > mastery.lastCorrectDate)
 
+  // v5 CardInput 必填 elapsed_days（自上次复习起经过的天数；调度器以 last_review 重算，此处为回退值）
+  const elapsedDays = mastery.lastReviewDate
+    ? Math.max(0, Math.floor((now.getTime() - mastery.lastReviewDate.getTime()) / 86400000))
+    : 0
+
   return {
     due: mastery.nextReviewDate || now,
     stability: mastery.stability,
     difficulty: mastery.difficulty,
+    elapsed_days: elapsedDays,
     scheduled_days: mastery.scheduledDays || 0,
     learning_steps: 0,
     reps: mastery.intervalLevel || 0,

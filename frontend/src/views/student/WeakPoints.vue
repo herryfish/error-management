@@ -25,7 +25,7 @@
     <van-cell-group
       v-else-if="weakItems.length > 0"
       inset
-      title="其他薄弱题目（错误次数多于正确次数）"
+      title="其他薄弱题目（做错过的未掌握题）"
     >
       <van-cell
         v-for="item in weakItems"
@@ -48,7 +48,7 @@ const userStore = useUserStore()
 const loading = ref(false)
 // 顽固薄弱点（后端按累计做错阈值打标）
 const stubbornItems = ref<Mastery[]>([])
-// 其他薄弱题目（错误次数多于正确次数，排除顽固置顶区已展示的）
+// 其他薄弱题目（任一次做错即入列，与 v1.3 口径一致；仅排除顽固置顶区已展示的）
 const weakItems = ref<Mastery[]>([])
 
 const formatDate = (dateStr: string) => {
@@ -66,7 +66,7 @@ onMounted(async () => {
       stubbornItems.value = all.filter(m => m.isStubborn && m.status !== 'mastered')
       const stubbornIds = new Set(stubbornItems.value.map(m => m.id))
       weakItems.value = all.filter(
-        m => m.status !== 'mastered' && m.incorrectCount > m.correctCount && !stubbornIds.has(m.id)
+        m => m.status !== 'mastered' && m.incorrectCount > 0 && !stubbornIds.has(m.id)
       )
     }
   } catch (e) { console.error(e) }

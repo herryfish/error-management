@@ -15,6 +15,8 @@ v1.3.0 落地的艾宾浩斯静态间隔表（1/2/4/7/15 天）对所有题目�
    - `REVIEW_SCHEDULER=ebbinghaus|fsrs` 可配，**默认 ebbinghaus（现网行为零变化）**，灰度验证后自行切换；FSRS 毕业阈值 `FSRS_GRADUATION_DAYS`（默认 30 天）与目标留存率 `FSRS_REQUEST_RETENTION`（默认 0.9）可配。
 
 2. **FSRS 集成方式（ts-fsrs）**：
+
+   - 版本锁定 `ts-fsrs@5.1.0`（engines `node>=18`，与 Dockerfile/CI 的 node:18 运行时契约一致；v6.0 声明 `node>=24` 属 off-contract 运行，评审 S1 结论，待运行时升级后另行评估）；
    - 做对 → Good 评级（stability 增长、间隔扩大）；做错 → Again 评级（stability 回落、间隔大幅缩短，按天粒度最少 1 天）；
    - mastery 表新增 `stability` / `difficulty` / `scheduledDays` 字段持久化 DSR 状态；每次复习时由 `toFsrsCard` 从持久化状态还原 FSRS 卡片（Review / Relearning 按最后一次对错判定），elapsed 天数由 ts-fsrs 依据 `last_review → now` 自动计算（逾期复习自动获得加成）；
    - **确定性优先**：`enable_fuzz` 关闭（间隔不随机抖动，可测试可预期）、`enable_short_term` 关闭（本系统每日打卡一次，分钟级短间隔无意义）。

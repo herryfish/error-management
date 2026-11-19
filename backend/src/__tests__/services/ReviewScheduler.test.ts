@@ -159,6 +159,26 @@ describe('ReviewScheduler（艾宾浩斯间隔调度）', () => {
       applyAssistedReviewResult(m, BASE)
       expect(m.isStubborn).toBe(false)
     })
+
+    it('已掌握题目 assisted 不降级：保持 MASTERED 与原 nextReviewDate（评审 S2）', () => {
+      const m = createMastery()
+      // 连对走完艾宾浩斯轮次（达 EBBINGHAUS_MASTERY_LEVEL=6）→ 已掌握
+      let t = BASE
+      for (let i = 0; i < EBBINGHAUS_MASTERY_LEVEL; i++) {
+        applyReviewResult(m, true, t)
+        if (m.status === MasteryStatus.MASTERED) break
+        t = new Date(m.nextReviewDate!.getTime())
+      }
+      expect(m.status).toBe(MasteryStatus.MASTERED)
+      const masteredNext = m.nextReviewDate
+
+      const assistedAt = new Date(t.getTime() + 86400000)
+      applyAssistedReviewResult(m, assistedAt)
+      // 仅记录查看时间，不降级、不重排复习
+      expect(m.status).toBe(MasteryStatus.MASTERED)
+      expect(m.nextReviewDate).toBe(masteredNext)
+      expect(m.lastReviewDate!.getTime()).toBe(assistedAt.getTime())
+    })
   })
 
   describe('时间工具', () => {

@@ -147,8 +147,12 @@ export function applyAssistedReviewResult(
   now: Date = new Date()
 ): Mastery {
   mastery.lastReviewDate = now
-  mastery.status = MasteryStatus.LEARNING
-  mastery.nextReviewDate = addDays(now, 1)
+  // 已掌握题目不降级：assisted 语义是「本轮未独立掌握」，不应追溯剥夺既有毕业
+  // 状态（评审 S2）——保持 MASTERED 及原 nextReviewDate，仅记录本次查看时间
+  if (mastery.status !== MasteryStatus.MASTERED) {
+    mastery.status = MasteryStatus.LEARNING
+    mastery.nextReviewDate = addDays(now, 1)
+  }
   return mastery
 }
 

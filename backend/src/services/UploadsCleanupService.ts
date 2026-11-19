@@ -66,9 +66,13 @@ export class UploadsCleanupService {
       console.log('[uploads-cleanup] UPLOADS_TTL_HOURS=0，临时文件清理已关闭')
       return
     }
+    // run() 内部失败（如 DB 瞬断）只记录不扡出：定时任务 rejection 泄漏会导致
+    // Node 默认 unhandled-rejection 直接退出进程（评审 B1）
+    const safeRun = () =>
+      this.run().catch((e) => console.error('[uploads-cleanup] 清理轮次失败:', e))
     this.startupTimer = setTimeout(() => {
-      void this.run()
-      this.timer = setInterval(() => void this.run(), CLEANUP_INTERVAL_MS)
+      void safeRun()
+      this.timer = setInterval(() => void safeRun(), CLEANUP_INTERVAL_MS)
     }, FIRST_RUN_DELAY_MS)
   }
 
