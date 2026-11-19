@@ -1,6 +1,6 @@
 {
   "name": "error-management-frontend",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "错题管理系统前端 - H5移动优先Web应用",
   "type": "module",
   "scripts": {
