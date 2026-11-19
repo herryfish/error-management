@@ -72,6 +72,8 @@ interface LLMConfig {
 # 主LLM配置
 LLM_PRIMARY_PROVIDER=openai
 LLM_PRIMARY_MODEL=gpt-4o-mini
+# 主模型调用超时（毫秒，默认 120000）
+LLM_PRIMARY_TIMEOUT_MS=120000
 LLM_PRIMARY_API_KEY=sk-xxx
 LLM_PRIMARY_API_BASE=https://api.openai.com/v1
 
@@ -324,6 +326,7 @@ services:
       - LLM_PRIMARY_MODEL=gpt-4o-mini
       - LLM_PRIMARY_API_KEY=${LLM_PRIMARY_API_KEY}
       - LLM_PRIMARY_API_BASE=https://api.openai.com/v1
+      - LLM_PRIMARY_TIMEOUT_MS=120000
       - LLM_FALLBACK_PROVIDER=anthropic
       - LLM_FALLBACK_MODEL=claude-3-opus-20240229
       - LLM_FALLBACK_API_KEY=${LLM_FALLBACK_API_KEY}

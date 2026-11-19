@@ -128,6 +128,8 @@ LLM_PRIMARY_PROVIDER=openai
 LLM_PRIMARY_MODEL=gpt-4o-mini
 LLM_PRIMARY_API_KEY=sk-your-api-key
 LLM_PRIMARY_API_BASE=https://api.openai.com/v1
+# 主模型调用超时（毫秒，默认 120000）
+LLM_PRIMARY_TIMEOUT_MS=120000
 
 # 降级LLM配置（可选）
 LLM_FALLBACK_PROVIDER=anthropic
@@ -141,7 +143,7 @@ LLM_FALLBACK_RETRY_COUNT=2
 LLM_FALLBACK_TIMEOUT_MS=30000
 ```
 
-超时时间（`LLM_FALLBACK_TIMEOUT_MS`）同时作用于 SDK 请求超时与降级策略编排；SDK 内部重试已关闭，重试与降级由服务层统一控制。
+超时控制：主模型客户端超时由 `LLM_PRIMARY_TIMEOUT_MS`（默认 120s，为整页多题 Vision 识别留余量）控制；降级客户端超时由 `LLM_FALLBACK_TIMEOUT_MS`（默认 30s）控制。SDK 内部重试已关闭（`maxRetries: 0`），重试与降级由服务层统一编排。
 
 #### 配置文件
 

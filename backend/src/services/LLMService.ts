@@ -85,7 +85,10 @@ export class LLMService {
     strategy: {
       enabled: boolean
       retryCount: number
+      /** 降级客户端超时 */
       timeoutMs: number
+      /** 主模型客户端超时（整页多题 Vision 识别常见 15-30s+，独立于降级策略超时） */
+      primaryTimeoutMs: number
     }
   }
 
@@ -120,29 +123,40 @@ export class LLMService {
         enabled: process.env.LLM_FALLBACK_ENABLED === 'true',
         retryCount: parseInt(process.env.LLM_FALLBACK_RETRY_COUNT || '2'),
         timeoutMs: parseInt(process.env.LLM_FALLBACK_TIMEOUT_MS || '30000'),
+        // 主模型调用（含整页多题 Vision 识别）独立超时，默认 120s 留足余量；
+        // 不复用 LLM_FALLBACK_TIMEOUT_MS（30s 对复杂照片可能不够，且变量名易误导）
+        primaryTimeoutMs: parseInt(process.env.LLM_PRIMARY_TIMEOUT_MS || '120000'),
       },
     }
   }
 
   private initializeClients() {
-    // 统一从降级策略配置读取超时时间；SDK 内部重试关闭，
-    // 由服务层的重试/降级编排统一控制，避免双重重试叠加请求耗时
-    const clientOptions = (apiKey: string, apiBase?: string) => ({
+    // 统一关闭 SDK 内部重试（maxRetries: 0）：重试/降级由服务层编排，
+    // 避免双重重试叠加请求耗时；主/降级客户端各自独立超时
+    const clientOptions = (apiKey: string, apiBase: string | undefined, timeoutMs: number) => ({
       apiKey,
       baseURL: apiBase,
-      timeout: this.config.strategy.timeoutMs,
+      timeout: timeoutMs,
       maxRetries: 0,
     })
 
     if (this.config.primary.apiKey) {
       this.primaryClient = new OpenAI(
-        clientOptions(this.config.primary.apiKey, this.config.primary.apiBase)
+        clientOptions(
+          this.config.primary.apiKey,
+          this.config.primary.apiBase,
+          this.config.strategy.primaryTimeoutMs
+        )
       )
     }
 
     if (this.config.fallback?.apiKey) {
       this.fallbackClient = new OpenAI(
-        clientOptions(this.config.fallback.apiKey, this.config.fallback.apiBase)
+        clientOptions(
+          this.config.fallback.apiKey,
+          this.config.fallback.apiBase,
+          this.config.strategy.timeoutMs
+        )
       )
     }
   }

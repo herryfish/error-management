@@ -115,6 +115,7 @@ describe('LLMService 配置默认值与客户端初始化', () => {
     delete process.env.LLM_FALLBACK_MODEL
     delete process.env.LLM_FALLBACK_API_KEY
     delete process.env.LLM_FALLBACK_TIMEOUT_MS
+    delete process.env.LLM_PRIMARY_TIMEOUT_MS
     process.env.LLM_FALLBACK_ENABLED = 'false'
   })
 
@@ -123,8 +124,9 @@ describe('LLMService 配置默认值与客户端初始化', () => {
     expect((svc as any).config.primary.model).toBe('gpt-4o-mini')
   })
 
-  it('OpenAI 客户端应按降级策略配置超时，且关闭 SDK 内部重试（由服务层统一编排）', () => {
+  it('OpenAI 客户端应按独立主模型超时初始化，且关闭 SDK 内部重试（由服务层统一编排）', () => {
     process.env.LLM_PRIMARY_MODEL = 'gpt-4'
+    process.env.LLM_PRIMARY_TIMEOUT_MS = '45000'
     new LLMService()
     const calls = jest.mocked(OpenAI).mock.calls
     expect(calls.length).toBe(1)
@@ -132,13 +134,20 @@ describe('LLMService 配置默认值与客户端初始化', () => {
       expect.objectContaining({
         apiKey: 'test-key',
         baseURL: 'https://api.openai.com/v1',
-        timeout: 30000,
+        timeout: 45000,
         maxRetries: 0,
       })
     )
   })
 
-  it('配置降级模型时，降级客户端也应携带超时配置', () => {
+  it('未设置 LLM_PRIMARY_TIMEOUT_MS 时主模型客户端默认 120s（为 Vision 识题留余量）', () => {
+    process.env.LLM_PRIMARY_MODEL = 'gpt-4'
+    new LLMService()
+    const calls = jest.mocked(OpenAI).mock.calls
+    expect(calls[0][0]).toEqual(expect.objectContaining({ timeout: 120000 }))
+  })
+
+  it('配置降级模型时，降级客户端应使用降级策略超时而非主模型超时', () => {
     process.env.LLM_PRIMARY_MODEL = 'gpt-4'
     process.env.LLM_FALLBACK_PROVIDER = 'openai'
     process.env.LLM_FALLBACK_MODEL = 'gpt-4o-mini'

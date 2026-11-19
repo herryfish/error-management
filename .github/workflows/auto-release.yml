@@ -79,6 +79,11 @@ jobs:
             echo "Release mode: inferred bump ($BUMP)"
           fi
 
+          if ! [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::package.json 版本号不是合法 semver（x.y.z）：$NEW_VERSION"
+            exit 1
+          fi
+
           if git rev-parse -q --verify "refs/tags/v$NEW_VERSION" >/dev/null; then
             echo "::error::Tag v$NEW_VERSION 已存在，无法重复发布。请先调整 package.json 版本号。"
             exit 1
@@ -114,6 +119,17 @@ jobs:
             fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
           "
 
+          # 同步子包 lockfile 顶层版本号（子目录可独立开发，避免子 lock 版本永久漂移）
+          node -e "
+            const fs = require('fs');
+            for (const f of ['backend/package-lock.json', 'frontend/package-lock.json']) {
+              const lock = JSON.parse(fs.readFileSync(f, 'utf8'));
+              lock.version = '$NEW_VERSION';
+              if (lock.packages && lock.packages['']) lock.packages[''].version = '$NEW_VERSION';
+              fs.writeFileSync(f, JSON.stringify(lock, null, 2) + '\\n');
+            }
+          "
+
           if git diff --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "版本号已是 $NEW_VERSION，无需提交"
@@ -144,7 +160,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json backend/package.json frontend/package.json
+          git add package.json package-lock.json backend/package.json backend/package-lock.json frontend/package.json frontend/package-lock.json
           git commit -m "chore(release): v${{ steps.version.outputs.version }}"
           git pull --rebase origin master
           git push origin HEAD:master
@@ -157,6 +173,9 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # changelog 是提交 subject 拼接的自由文本（含引号/反引号/$(...)），
+          # 必须经 env 注入而非内联展开，否则会被 shell 执行（同 auto-review 修复模式）
+          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
         run: |
           cat > release-notes.md <<'INSTALL_EOF'
 
@@ -175,7 +194,7 @@ jobs:
           {
             echo "## 更新内容"
             echo ""
-            printf '%s\n' "${{ steps.changelog.outputs.changelog }}"
+            printf '%s\n' "$CHANGELOG"
             cat release-notes.md
           } > release-notes-full.md
 
@@ -185,9 +204,11 @@ jobs:
 
       - name: Notify merged PR
         uses: actions/github-script@v7
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         with:
           script: |
-            var version = '${{ steps.version.outputs.version }}';
+            var version = process.env.RELEASE_VERSION;
             var releaseUrl = context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/releases/tag/v' + version;
             var body = '## ✅ Release v' + version + ' 已发布\n\n' +
               '- GitHub Release: ' + releaseUrl + '\n' +

@@ -185,7 +185,7 @@ const openModelStats = async () => {
     const response = await api.get('/llm/usage/summary')
     const resData = response.data?.data || response.data || {}
     modelStatsList.value = (resData.modelSummary || []).map((m: any) => ({
-      model: m.model || 'gpt-4-vision-preview',
+      model: m.model || 'gpt-4o-mini',
       count: Number(m.count || 0),
       totalTokens: Number(m.totalTokens || 0)
     }))
