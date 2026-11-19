@@ -1,0 +1,4 @@
+# frontend 镜像 build context（./frontend）裁剪：
+# dist 必须保留（Dockerfile COPY dist）；排除 node_modules 避免宿主侧
+# npm workspaces 安装残留导致构建 context 膨胀。
+node_modules

@@ -1,0 +1,14 @@
+# deploy/backend.Dockerfile 专用 build context 裁剪（context 为仓库根）
+.git
+.github
+**/node_modules
+backend/dist
+frontend
+docs
+design
+nginx
+scripts
+logs
+uploads
+.scratch
+*.md
