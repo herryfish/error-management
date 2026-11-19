@@ -1,0 +1,25 @@
+# DC-481：backend/frontend 生产镜像均以仓库根为 build context（见 docker-compose.yml）。
+# 本文件同时服务两个镜像构建：BuildKit 下 <Dockerfile>.dockerignore 优先，
+# 其余情况（含经典 builder）回落到本文件。构建产物只依赖根 package.json /
+# package-lock.json 与 backend/、frontend/ 源码，其余一律不进 context。
+.git
+.github
+.scratch
+**/node_modules
+backend/dist
+frontend/dist
+backend/coverage
+frontend/coverage
+docs
+design
+nginx
+scripts
+logs
+uploads
+database
+*.md
+*.sh
+docker-compose*.yml
+config.example.json
+.env*
+.ai-config.yml

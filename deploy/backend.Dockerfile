@@ -1,15 +1,13 @@
-# 错题系统 backend 镜像（244 测试环境用，DC-478）
+# 错题系统 backend 镜像（244 测试环境用，DC-478；DC-481 起与生产路径同机制）
 #
-# 背景：backend/package-lock.json 与 package.json 已失同步（子 lockfile 不再维护，
-# 唯一权威 lockfile 是根 package-lock.json，见 .github/workflows/auto-review.yml 注释），
-# backend/Dockerfile 里的 `npm ci` 在新 clone 的容器内构建会因 EUSAGE 失败
-# （实测缺 bullmq / ioredis / ts-fsrs / openai 等）。
-# 本文件以仓库根为 build context，走 npm workspaces 安装（与 CI 一致）：
+# DC-481 已修复构建失同步：生产 backend/Dockerfile 与本文件均以仓库根为 build
+# context，走根 npm workspaces 安装（唯一权威 lockfile 是根 package-lock.json，
+# 子 lockfile 已删除）。两者构建逻辑保持一致，本文件保留是因 244 部署目录的
+# docker-compose.override.yml（gitignored）将 services.backend.build 指向本文件，
+# 与生产路径等价，不影响任何行为。
 #   docker build -f deploy/backend.Dockerfile .
-# compose 侧通过 docker-compose.override.yml（gitignored，仅 244 部署目录存在）
-# 将 services.backend.build 指向本文件，不影响生产构建路径。
 
-# ---------- 构建阶段：根 workspace 安装 + tsc ----------
+# ---------- 构建阶段：根 workspace 安装 + tsc（与 backend/Dockerfile 保持一致） ----------
 FROM node:18-alpine AS builder
 
 WORKDIR /app
