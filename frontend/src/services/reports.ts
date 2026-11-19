@@ -65,6 +65,28 @@ export interface DailyReport {
 }
 
 /**
+ * 薄弱点画像接口
+ */
+export interface ErrorTagSlice {
+  tag: string
+  count: number
+}
+
+export interface WeakKnowledgePoint {
+  point: string
+  questionCount: number
+  incorrectCount: number
+  totalQuestions: number
+}
+
+export interface ErrorProfile {
+  totalQuestions: number
+  taggedQuestions: number
+  errorTagDistribution: ErrorTagSlice[]
+  weakKnowledgePoints: WeakKnowledgePoint[]
+}
+
+/**
  * 统计接口
  */
 export interface Stats {
@@ -115,6 +137,12 @@ export const reportService = {
 
   async getChildReport(parentId: string): Promise<WeeklyReport> {
     const response = await api.get(`/reports/parent/${parentId}/child`)
+    return response.data
+  },
+
+  /** 薄弱点画像（错因占比 + 薄弱知识点，学生/家长共用） */
+  async getErrorProfile(studentId: string): Promise<ErrorProfile> {
+    const response = await api.get(`/reports/error-profile/${studentId}`)
     return response.data
   },
 }

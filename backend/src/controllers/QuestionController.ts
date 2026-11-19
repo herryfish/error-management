@@ -18,6 +18,7 @@ import { AppDataSource } from '../config/database'
 import { Question, Subject, QuestionType } from '../models/Question'
 import { Mastery, MasteryStatus } from '../models/Mastery'
 import { LLMService } from '../services/LLMService'
+import { normalizeErrorTags, mergeErrorTags } from '../constants/errorTags'
 import { v4 as uuidv4 } from 'uuid'
 
 /**
@@ -122,6 +123,9 @@ export class QuestionController {
         }
       }
 
+      // 错因标签（多维度错因体系，白名单校验）
+      const errorTags = normalizeErrorTags(req.body.errorTags)
+
       
       // 错题防重排查：根据 studentId + subject + title/content 校验
       const cleanContent = (content || title || '').replace(/[^一-龥a-zA-Z0-9]/g, '');
@@ -150,12 +154,13 @@ export class QuestionController {
         type,
         difficulty: parseInt(difficulty) || 1,
         knowledgePoints: parsedKnowledgePoints,
+        errorTags,
         imageUrl,
         answer,
         explanation,
         studentId: userId,
         isIdentified: false,
-      })
+      } as any)
 
       await this.questionRepository.save(question)
       await this.ensureMasteryRecord((question as any).id, userId)
@@ -185,8 +190,52 @@ export class QuestionController {
         })
       }
 
+      // 错因标签单独校验（白名单），避免任意字段直写
+      if ('errorTags' in updateData) {
+        updateData.errorTags = normalizeErrorTags(updateData.errorTags)
+      }
+
       // Update question
       Object.assign(question, updateData)
+      await this.questionRepository.save(question)
+
+      res.json({
+        status: 'success',
+        data: question,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * 设置错题的错因标签（录入确认/重做后标注错因）
+   * mode=replace：整组替换；mode=merge：在现有标签上追加（重做流程标注）
+   */
+  setQuestionErrorTags = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params
+      const { tags, mode } = req.body
+
+      const question = await this.questionRepository.findOne({
+        where: { id },
+      })
+
+      if (!question) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Question not found',
+        })
+      }
+
+      question.errorTags = mode === 'replace'
+        ? normalizeErrorTags(tags)
+        : mergeErrorTags(question.errorTags, tags)
+
       await this.questionRepository.save(question)
 
       res.json({

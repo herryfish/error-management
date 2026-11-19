@@ -39,6 +39,8 @@ export interface Question {
   originalImageUrl?: string
   /** 独立插图URL列表 */
   diagramUrls?: string[]
+  /** 错因标签（审题不清/计算粗心/公式遗忘/方法缺失/其他） */
+  errorTags?: string[]
   /** 参考答案 */
   answer?: string
   /** 解析说明 */
@@ -76,6 +78,8 @@ export interface CreateQuestionRequest {
   difficulty: number
   /** 知识点标签 */
   knowledgePoints: string[]
+  /** 错因标签 */
+  errorTags?: string[]
   /** 参考答案 */
   answer?: string
   /** 解析说明 */
@@ -109,7 +113,7 @@ export const questionService = {
     const formData = new FormData()
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        if (key === 'knowledgePoints') {
+        if (key === 'knowledgePoints' || key === 'errorTags') {
           formData.append(key, JSON.stringify(value))
         } else {
           formData.append(key, String(value))
@@ -146,6 +150,12 @@ export const questionService = {
 
   async update(id: string, data: Partial<CreateQuestionRequest>): Promise<Question> {
     const response = await api.put(`/questions/${id}`, data)
+    return response.data
+  },
+
+  /** 设置错因标签（mode=replace 整组替换；mode=merge 追加，重做后标注用） */
+  async setErrorTags(id: string, tags: string[], mode: 'replace' | 'merge' = 'merge'): Promise<Question> {
+    const response = await api.put(`/questions/${id}/error-tags`, { tags, mode })
     return response.data
   },
 

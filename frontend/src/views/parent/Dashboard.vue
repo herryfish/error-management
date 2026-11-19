@@ -44,6 +44,13 @@
         @click="$router.push('/parent/questions')"
       />
       <van-cell
+        title="薄弱点画像"
+        is-link
+        icon="chart-trending-o"
+        label="错因占比与薄弱知识点"
+        @click="$router.push('/reports/weakness')"
+      />
+      <van-cell
         title="统计信息"
         is-link
         icon="chart-trending-o"

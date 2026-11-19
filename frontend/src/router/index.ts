@@ -148,6 +148,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/reports/weakness',
+    name: 'WeaknessProfile',
+    component: () => import('@/views/common/WeaknessProfile.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: () => import('@/views/common/Settings.vue'),

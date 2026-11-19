@@ -19,6 +19,7 @@ import { Question } from '../models/Question'
 import { RedoRecord } from '../models/RedoRecord'
 import { Mastery, MasteryStatus } from '../models/Mastery'
 import { SimilarQuestion } from '../models/SimilarQuestion'
+import { ErrorProfileService } from '../services/ErrorProfileService'
 
 /**
  * 报告控制器类
@@ -127,6 +128,28 @@ export class ReportController {
       res.json({
         status: 'success',
         data: stats,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * 薄弱点画像：错因占比 + 薄弱知识点（学生/家长共用）
+   */
+  getErrorProfile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { studentId } = req.params
+
+      const profile = await new ErrorProfileService().getErrorProfile(studentId)
+
+      res.json({
+        status: 'success',
+        data: profile,
       })
     } catch (error) {
       next(error)

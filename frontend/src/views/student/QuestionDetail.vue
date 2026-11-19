@@ -88,6 +88,25 @@
         </van-cell>
       </van-cell-group>
 
+      <!-- 错因标签（多维度错因体系） -->
+      <van-cell-group
+        v-if="question.errorTags?.length"
+        inset
+        style="margin-top: 16px"
+      >
+        <van-cell title="错因标签">
+          <van-tag
+            v-for="tag in question.errorTags"
+            :key="tag"
+            type="danger"
+            plain
+            style="margin-right: 8px; margin-bottom: 8px;"
+          >
+            {{ tag }}
+          </van-tag>
+        </van-cell>
+      </van-cell-group>
+
       <!-- 重做记录与掌握状态（家长端/全角色视角） -->
       <van-cell-group
         inset

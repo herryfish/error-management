@@ -67,6 +67,24 @@
               placeholder="用逗号分隔"
             />
             <van-field
+              name="errorTags"
+              label="错因标签"
+            >
+              <template #input>
+                <van-checkbox-group v-model="form.errorTags" direction="horizontal">
+                  <van-checkbox
+                    v-for="tag in ERROR_TAG_PRESETS"
+                    :key="tag"
+                    :name="tag"
+                    shape="square"
+                    style="margin-right: 8px; margin-bottom: 4px;"
+                  >
+                    {{ tag }}
+                  </van-checkbox>
+                </van-checkbox-group>
+              </template>
+            </van-field>
+            <van-field
               v-model="form.answer"
               type="textarea"
               rows="2"
@@ -324,7 +342,11 @@ const form = ref({
   difficulty: 1,
   answer: '',
   explanation: '',
+  errorTags: [] as string[],
 })
+
+// 错因标签预设（与后端白名单一致）
+const ERROR_TAG_PRESETS = ['审题不清', '计算粗心', '公式遗忘', '方法缺失', '其他']
 
 const knowledgePointsStr = ref('')
 

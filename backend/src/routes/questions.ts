@@ -55,6 +55,9 @@ router.post(
 
 router.post('/batch', questionController.createBatchQuestions)
 
+// 错因标签标注（录入确认/重做后追加）
+router.put('/:id/error-tags', questionController.setQuestionErrorTags)
+
 // Student-specific routes
 router.get(
   '/student/:studentId',
