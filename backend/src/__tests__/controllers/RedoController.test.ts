@@ -54,6 +54,44 @@ describe('RedoController', () => {
       )
       expect(res.status).toHaveBeenCalledWith(201)
     })
+
+    it('查看完整解析兑底（assisted）且做对：本轮不推进掌握轮次、次日同轮重试', async () => {
+      const mockRedo = (controller as any).redoRepository
+      mockRedo.createQueryBuilder.mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      })
+      mockRedo.create.mockImplementation((data: any) => ({ id: 'r2', ...data }))
+      mockRedo.save.mockImplementation(async (data: any) => data)
+
+      // 同一 mock 仓库对象既服务 redo 又服务 question/mastery：按调用顺序返回
+      const question = { id: 'q1', type: 'choice', answer: 'A' }
+      const mastery: any = {
+        status: 'learning', correctCount: 1, incorrectCount: 0, intervalLevel: 1,
+      }
+      mockRedo.findOne
+        .mockResolvedValueOnce(question)   // Question
+        .mockResolvedValueOnce(mastery)    // Mastery
+      mockRedo.save.mockResolvedValueOnce(mastery)
+
+      const res = mockRes()
+      await controller.createRedo(
+        mockReq({ questionId: 'q1', answer: 'A', assisted: true }),
+        res, mockNext
+      )
+      expect(res.status).toHaveBeenCalledWith(201)
+      // 重做记录带 assisted 标记
+      expect(mockRedo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ assisted: true, isCorrect: true })
+      )
+      // 未独立掌握：轮次不推进、不计连对、次日同轮重试
+      expect(mastery.intervalLevel).toBe(1)
+      expect(mastery.correctCount).toBe(1)
+      expect(mastery.nextReviewDate!.getTime()).toBe(
+        mastery.lastReviewDate.getTime() + 24 * 3600 * 1000
+      )
+    })
   })
 
   describe('gradeRedo', () => {

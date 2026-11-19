@@ -17,6 +17,7 @@ import questionRoutes from './routes/questions'
 import redoRoutes from './routes/redos'
 import masteryRoutes from './routes/mastery'
 import similarRoutes from './routes/similar'
+import guidanceRoutes from './routes/guidance'
 import reportRoutes from './routes/reports'
 import llmRoutes from './routes/llm'
 import adminRoutes from './routes/admin'
@@ -63,6 +64,7 @@ app.use('/api/questions', questionRoutes)
 app.use('/api/redos', redoRoutes)
 app.use('/api/mastery', masteryRoutes)
 app.use('/api/similar', similarRoutes)
+app.use('/api/guidance', guidanceRoutes)
 app.use('/api/reports', reportRoutes)
 app.use('/api/llm', llmRoutes)
 app.use('/api/admin', adminRoutes)

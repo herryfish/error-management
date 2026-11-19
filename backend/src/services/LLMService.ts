@@ -17,6 +17,11 @@
 import OpenAI from 'openai'
 import { AppDataSource } from '../config/database'
 import { LLMUsage, LLMScene } from '../models/LLMUsage'
+import {
+  buildGuidancePrompt,
+  type GuidanceLevel,
+  type GuidanceQuestionInfo,
+} from './guidancePrompts'
 
 /**
  * LLM配置接口
@@ -729,6 +734,76 @@ Return the result in JSON format.`,
           },
         }
       }
+    }
+  }
+
+  /**
+   * 阶梯式引导提示（检索练习防剧透）：按级别生成 1/2/3 级渐进提示。
+   * 级别约束见 guidancePrompts.ts（① 考点定向 → ② 思路台阶 → ③ 关键方程，均不给出最终答案）。
+   *
+   * @returns 提示正文（纯文本，可能含 LaTeX）
+   */
+  async generateGuidanceHint(
+    question: GuidanceQuestionInfo,
+    level: GuidanceLevel,
+    userId: string
+  ): Promise<string> {
+    const startTime = Date.now()
+
+    if (!this.primaryClient) {
+      throw new Error('Primary LLM client not configured')
+    }
+
+    try {
+      const response = await this.primaryClient.chat.completions.create({
+        model: this.config.primary.model,
+        messages: [
+          {
+            role: 'user',
+            content: buildGuidancePrompt(question, level),
+          },
+        ],
+        max_tokens: 400,
+      })
+
+      const latencyMs = Date.now() - startTime
+      const content = (response.choices[0]?.message?.content || '').trim()
+
+      await this.recordUsage({
+        userId,
+        scene: LLMScene.GUIDANCE,
+        provider: this.config.primary.provider,
+        model: this.config.primary.model,
+        isFallback: false,
+        tokens: {
+          input: response.usage?.prompt_tokens || 0,
+          output: response.usage?.completion_tokens || 0,
+          total: response.usage?.total_tokens || 0,
+        },
+        cost: 0,
+        latencyMs,
+        success: true,
+      })
+
+      // 容错：剥掉可能被模型自加的 Markdown 代码围栏
+      return content
+        .replace(/^```(?:markdown|md|text)?\s*/i, '')
+        .replace(/\s*```$/, '')
+        .trim()
+    } catch (error) {
+      await this.recordUsage({
+        userId,
+        scene: LLMScene.GUIDANCE,
+        provider: this.config.primary.provider,
+        model: this.config.primary.model,
+        isFallback: false,
+        tokens: { input: 0, output: 0, total: 0 },
+        cost: 0,
+        latencyMs: Date.now() - startTime,
+        success: false,
+        error: (error as Error).message,
+      })
+      throw error
     }
   }
 

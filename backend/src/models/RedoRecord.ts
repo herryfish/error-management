@@ -40,6 +40,10 @@ export class RedoRecord {
   @Column({ nullable: true })
   feedback: string
 
+  /** 是否查看完整解析兜底：该轮判定未独立掌握，不推进掌握轮次（阶梯提示 P2） */
+  @Column({ default: false })
+  assisted: boolean
+
   @ManyToOne(() => Question, (question) => question.redoRecords)
   @JoinColumn({ name: 'questionId' })
   question: Question

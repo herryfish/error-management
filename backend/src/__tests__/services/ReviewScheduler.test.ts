@@ -3,6 +3,7 @@ import {
   EBBINGHAUS_TOTAL_RUNGS,
   EBBINGHAUS_MASTERY_LEVEL,
   applyReviewResult,
+  applyAssistedReviewResult,
   markStubbornIfNeeded,
   isReviewDue,
   addDays,
@@ -129,6 +130,34 @@ describe('ReviewScheduler（艾宾浩斯间隔调度）', () => {
         createdAt: addDays(startOfToday(BASE), -1),
       })
       expect(isReviewDue(m, BASE)).toBe(true)
+    })
+  })
+
+  describe('查看完整解析兑底（assisted）语义', () => {
+    it('assisted 轮次：不推进轮次、不计连对，明日同轮重试', () => {
+      const m = createMastery()
+      applyReviewResult(m, true, BASE)
+      applyReviewResult(m, true, new Date(m.nextReviewDate!.getTime()))
+      expect(m.intervalLevel).toBe(2)
+      expect(m.correctCount).toBe(2)
+
+      const assistedAt = new Date(m.nextReviewDate!.getTime())
+      applyAssistedReviewResult(m, assistedAt)
+
+      // 未独立掌握：轮次与连对保持原状，仅重排为明天重试
+      expect(m.status).toBe(MasteryStatus.LEARNING)
+      expect(m.intervalLevel).toBe(2)
+      expect(m.correctCount).toBe(2)
+      expect(m.nextReviewDate!.getTime()).toBe(addDays(assistedAt, 1).getTime())
+      expect(m.lastReviewDate!.getTime()).toBe(assistedAt.getTime())
+    })
+
+    it('assisted 不清零已有进度也不触发顽固标记', () => {
+      const m = createMastery({ incorrectCount: 2 })
+      applyReviewResult(m, true, BASE)
+      expect(m.isStubborn).toBe(false)
+      applyAssistedReviewResult(m, BASE)
+      expect(m.isStubborn).toBe(false)
     })
   })
 

@@ -133,6 +133,26 @@ export function applyReviewResult(
 }
 
 /**
+ * 将一次「查看完整解析兑底」的重做结果应用到掌握记录（原地修改）。
+ *
+ * 语义（DC-468 P2 检索练习防剧透）：完整解析使检索难度降为 0，本轮判定
+ * 「未独立掌握」——不计入连对、不推进轮次、不更新 FSRS 记忆状态，
+ * 次日同轮重试（保持当前轮次与间隔计划重排为明天）。
+ *
+ * @param mastery 掌握记录实体
+ * @param now 重做发生时间（默认当前时间）
+ */
+export function applyAssistedReviewResult(
+  mastery: Mastery,
+  now: Date = new Date()
+): Mastery {
+  mastery.lastReviewDate = now
+  mastery.status = MasteryStatus.LEARNING
+  mastery.nextReviewDate = addDays(now, 1)
+  return mastery
+}
+
+/**
  * 按 `REVIEW_SCHEDULER` 配置将一次复习结果应用到掌握记录（调度器统一入口）。
  *
  * - ebbinghaus（默认）：静态艾宾浩斯 1/2/4/7/15 天间隔表；

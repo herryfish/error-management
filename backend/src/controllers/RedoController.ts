@@ -16,7 +16,7 @@ import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { RedoRecord, RedoType } from '../models/RedoRecord'
 import { LLMService } from '../services/LLMService'
-import { applyScheduledReview } from '../services/ReviewScheduler'
+import { applyScheduledReview, applyAssistedReviewResult } from '../services/ReviewScheduler'
 
 /**
  * 重做控制器类
@@ -78,8 +78,9 @@ export class RedoController {
 
   createRedo = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { questionId, answer, userAnswer } = req.body
+      const { questionId, answer, userAnswer, assisted } = req.body
       const finalAnswer = answer || userAnswer || ""
+      const sawFullSolution = assisted === true
       const userId = (req as any).user.id
 
       // 校验该学生今天是否已经对该题目进行过重做（避免当天重复刷题）
@@ -146,16 +147,22 @@ export class RedoController {
         isCorrect,
         feedback,
         gradeResult,
+        assisted: sawFullSolution,
       })
 
-      // 联动更新 Mastery 状态（艾宾浩斯间隔调度：第 1/2/4/7/15 天）
+      // 联动更新 Mastery 状态（调度器统一入口；查看完整解析兜底的轮次按未独立掌握处理）
       if (question) {
         const masteryRepository = AppDataSource.getRepository('Mastery')
         const mastery = await masteryRepository.findOne({
           where: { questionId: question.id, studentId: userId }
         })
         if (mastery) {
-          applyScheduledReview(mastery as any, isCorrect)
+          if (sawFullSolution && isCorrect) {
+            // 检索练习被完整解析破解：不计连对、不推进轮次，明日同轮重试（DC-468 P2）
+            applyAssistedReviewResult(mastery as any)
+          } else {
+            applyScheduledReview(mastery as any, isCorrect)
+          }
           await masteryRepository.save(mastery)
         }
       }
