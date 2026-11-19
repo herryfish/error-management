@@ -129,7 +129,7 @@
           </div>
 
           <van-button
-            v-if="multiSelectedFile"
+            v-if="multiSelectedFile && !multiTaskId"
             type="primary"
             block
             :loading="multiIdentifying"
@@ -138,6 +138,32 @@
           >
             整页智能切分与识别
           </van-button>
+
+          <!-- 异步识别进度（提交后立即返回 taskId，轮询进度，避免 Nginx 504） -->
+          <div v-if="multiTaskId" class="multi-task-progress" style="margin-top: 16px;">
+            <van-cell-group inset>
+              <van-cell title="识别任务进行中" :label="multiTaskStateText">
+                <template #value>
+                  <van-tag :type="multiTaskFailed ? 'danger' : 'primary'">
+                    {{ multiTaskFailed ? '失败' : `${multiTaskProgress}%` }}
+                  </van-tag>
+                </template>
+              </van-cell>
+              <van-cell>
+                <template #label>
+                  <van-progress :percentage="multiTaskProgress" stroke-width="6" />
+                </template>
+              </van-cell>
+            </van-cell-group>
+            <van-button
+              size="small"
+              plain
+              style="margin-top: 8px;"
+              @click="cancelMultiPolling"
+            >
+              {{ multiTaskFailed ? '重新开始' : '取消等待' }}
+            </van-button>
+          </div>
 
           <div v-if="multiItems && multiItems.length > 0" class="multi-items-list" style="margin-top: 16px; text-align: left;">
             <div style="font-weight: 600; margin-bottom: 8px; font-size: 15px;">识别结果列表 (勾选需要导入的题目)：</div>
@@ -252,7 +278,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { questionService, type Question } from '@/services/questions'
 import { renderMath } from '@/utils/math'
@@ -274,6 +300,27 @@ const multiItems = ref<any[]>([])
 const selectedMultiIds = ref<string[]>([])
 const batchSubmitting = ref(false)
 
+// 异步识别任务状态（taskId + 轮询）
+const multiTaskId = ref('')
+const multiTaskProgress = ref(0)
+const multiTaskState = ref<'queued' | 'processing' | 'completed' | 'failed' | ''>('')
+const multiTaskError = ref('')
+let multiPollTimer: ReturnType<typeof setInterval> | null = null
+
+const multiTaskFailed = computed(() => multiTaskState.value === 'failed')
+const multiTaskStateText = computed(() => {
+  switch (multiTaskState.value) {
+    case 'queued':
+      return '任务排队中，即将开始识别…'
+    case 'processing':
+      return `Vision 切题识别中（${multiTaskProgress.value}%），大图通常需要 15-30 秒`
+    case 'failed':
+      return multiTaskError.value || '识别任务失败，可重新上传再试'
+    default:
+      return ''
+  }
+})
+
 const triggerMultiFileInput = () => {
   multiFileInputRef.value?.click()
 }
@@ -284,6 +331,10 @@ const onMultiFileChange = (event: Event) => {
     const file = input.files[0]
     multiSelectedFile.value = file
     multiPreviewUrl.value = URL.createObjectURL(file)
+    // 换图时重置上一轮任务状态
+    cancelMultiPolling()
+    multiItems.value = []
+    selectedMultiIds.value = []
     showToast('整页试卷图片已选择')
   }
 }
@@ -295,16 +346,73 @@ const identifyMultiQuestions = async () => {
   }
   multiIdentifying.value = true
   try {
-    const res = await questionService.identifyMulti(multiSelectedFile.value)
-    multiItems.value = res.items || []
-    selectedMultiIds.value = multiItems.value.map(i => i.tempId)
-    showToast('整页多题切分成功')
+    // 异步提交：立即返回 taskId，轮询进度，规避同步 HTTP 挂起导致的 Nginx 504
+    const { taskId } = await questionService.identifyMultiAsync(multiSelectedFile.value)
+    multiTaskId.value = taskId
+    multiTaskState.value = 'queued'
+    multiTaskProgress.value = 0
+    multiTaskError.value = ''
+    startMultiPolling()
   } catch (err: any) {
-    showToast(err.message || '多题识别失败')
+    showToast(err.message || '任务提交失败')
   } finally {
     multiIdentifying.value = false
   }
 }
+
+const MULTI_POLL_INTERVAL_MS = 2000
+const MULTI_POLL_MAX_MS = 10 * 60 * 1000
+
+const startMultiPolling = () => {
+  stopMultiPolling()
+  const startedAt = Date.now()
+  multiPollTimer = setInterval(async () => {
+    if (Date.now() - startedAt > MULTI_POLL_MAX_MS) {
+      stopMultiPolling()
+      multiTaskState.value = 'failed'
+      multiTaskError.value = '识别超时，请重试或改用单题拍照录入'
+      return
+    }
+    try {
+      const task = await questionService.getMultiTaskStatus(multiTaskId.value)
+      multiTaskState.value = task.state
+      multiTaskProgress.value = task.progress || 0
+      if (task.state === 'completed') {
+        stopMultiPolling()
+        multiItems.value = task.result?.items || []
+        selectedMultiIds.value = multiItems.value.map(i => i.tempId)
+        showToast('整页多题切分成功')
+      } else if (task.state === 'failed') {
+        stopMultiPolling()
+        multiTaskError.value = task.error || '识别任务失败'
+      }
+    } catch (err: any) {
+      // 404 等异常视为任务丢失，终止轮询
+      stopMultiPolling()
+      multiTaskState.value = 'failed'
+      multiTaskError.value = err.message || '查询任务状态失败'
+    }
+  }, MULTI_POLL_INTERVAL_MS)
+}
+
+const stopMultiPolling = () => {
+  if (multiPollTimer) {
+    clearInterval(multiPollTimer)
+    multiPollTimer = null
+  }
+}
+
+const cancelMultiPolling = () => {
+  stopMultiPolling()
+  multiTaskId.value = ''
+  multiTaskState.value = ''
+  multiTaskProgress.value = 0
+  multiTaskError.value = ''
+}
+
+onUnmounted(() => {
+  stopMultiPolling()
+})
 
 const toggleMultiItem = (id: string) => {
   const index = selectedMultiIds.value.indexOf(id)

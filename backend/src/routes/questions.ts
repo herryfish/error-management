@@ -53,6 +53,17 @@ router.post(
   questionController.identifyMultiQuestions
 )
 
+// 异步整页识别：立即返回 taskId，前端轮询 /identify-multi/tasks/:taskId
+router.post(
+  '/identify-multi/async',
+  upload.single('image'),
+  questionController.submitIdentifyMultiTask
+)
+router.get(
+  '/identify-multi/tasks/:taskId',
+  questionController.getIdentifyMultiTaskStatus
+)
+
 router.post('/batch', questionController.createBatchQuestions)
 
 // 错因标签标注（录入确认/重做后追加）

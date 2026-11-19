@@ -208,6 +208,42 @@ export const questionService = {
     return result.data || result
   },
 
+  /**
+   * 异步提交整页多题识别：立即返回 taskId，避免同步挂起触发 Nginx 504。
+   * 配合 getMultiTaskStatus 轮询进度与结果。
+   */
+  async identifyMultiAsync(image: File, subject?: string): Promise<{ taskId: string; statusUrl: string }> {
+    const formData = new FormData()
+    formData.append('image', image)
+    if (subject) formData.append('subject', subject)
+
+    const token = localStorage.getItem('token')
+    const response = await fetch('/api/questions/identify-multi/async', {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    })
+    const result = await response.json()
+    if (!response.ok) {
+      throw new Error(result.message || `HTTP ${response.status}`)
+    }
+    return result.data || result
+  },
+
+  /** 查询识别任务状态（queued/processing/completed/failed + 进度 + 结果） */
+  async getMultiTaskStatus(taskId: string): Promise<{
+    taskId: string
+    state: 'queued' | 'processing' | 'completed' | 'failed'
+    progress: number
+    result?: { items: any[] }
+    error?: string
+  }> {
+    const response = await api.get(`/questions/identify-multi/tasks/${taskId}`)
+    return response.data
+  },
+
   async createBatch(items: any[]): Promise<Question[]> {
     const response = await api.post('/questions/batch', { items })
     return response.data

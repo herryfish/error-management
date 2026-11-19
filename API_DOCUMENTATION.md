@@ -1126,7 +1126,7 @@ Authorization: Bearer <token>
 ### GET /api/llm/usage/summary
 
 ### POST /api/questions/identify-multi
-大模型多题切分识别接口，支持上传整页图片，自动定位并识别页面中的多道错题。
+大模型多题切分识别接口（同步兼容接口，建议改用异步接口，避免长请求触发 Nginx 504）。
 
 #### 请求
 - Header: `Content-Type: multipart/form-data`
@@ -1136,11 +1136,49 @@ Authorization: Bearer <token>
 ```json
 {
   "status": "success",
-  "data": [
-    { "title": "...", "content": "...", "answer": "...", "bbox": [0,0,100,100] }
-  ]
+  "data": {
+    "items": [
+      { "tempId": "...", "title": "...", "content": "...", "subject": "math", "type": "choice", "answer": "...", "explanation": "...", "isDuplicate": false }
+    ]
+  }
 }
 ```
+
+### POST /api/questions/identify-multi/async
+整页多题识别异步任务提交（推荐）：立即返回 taskId，前端轮询进度与结果，消除 15-30s 同步挂起的 504 风险（见 docs/adr/0004）。
+
+#### 请求
+- Header: `Content-Type: multipart/form-data`
+- Body: `file` (Buffer/Stream)、`subject`（可选，默认 math）
+
+#### 响应（202）
+```json
+{
+  "status": "success",
+  "data": {
+    "taskId": "<uuid>",
+    "statusUrl": "/api/questions/identify-multi/tasks/<uuid>"
+  }
+}
+```
+
+### GET /api/questions/identify-multi/tasks/:taskId
+查询异步识别任务状态（轮询入口，建议 2 秒间隔，超时 10 分钟）。
+
+#### 响应
+```json
+{
+  "status": "success",
+  "data": {
+    "taskId": "<uuid>",
+    "state": "queued | processing | completed | failed",
+    "progress": 55,
+    "result": { "items": [ ... 同同步接口 items 结构 ... ] },
+    "error": "失败原因（仅 failed）"
+  }
+}
+```
+任务不存在或已过期（完成后 1 小时清理）返回 404。
 获取LLM用量汇总
 
 **请求头**:
