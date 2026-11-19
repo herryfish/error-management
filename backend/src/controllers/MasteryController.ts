@@ -16,7 +16,7 @@ import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { Mastery, MasteryStatus } from '../models/Mastery'
 import { resolveStudentUserId } from '../utils/resolveStudentUserId'
-import { applyReviewResult, startOfToday, endOfToday } from '../services/ReviewScheduler'
+import { applyScheduledReview, startOfToday, endOfToday } from '../services/ReviewScheduler'
 
 /**
  * 掌握状态控制器类
@@ -156,8 +156,8 @@ export class MasteryController {
         })
       }
 
-      // Update mastery based on review result (艾宾浩斯间隔调度：第 1/2/4/7/15 天)
-      applyReviewResult(mastery, isCorrect)
+      // Update mastery based on review result（调度器统一入口：默认艾宾浩斯，REVIEW_SCHEDULER=fsrs 时切换 FSRS 动态调度）
+      applyScheduledReview(mastery, isCorrect)
 
       await this.masteryRepository.save(mastery)
 

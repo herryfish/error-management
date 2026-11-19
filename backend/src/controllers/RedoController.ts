@@ -16,7 +16,7 @@ import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { RedoRecord, RedoType } from '../models/RedoRecord'
 import { LLMService } from '../services/LLMService'
-import { applyReviewResult } from '../services/ReviewScheduler'
+import { applyScheduledReview } from '../services/ReviewScheduler'
 
 /**
  * 重做控制器类
@@ -155,7 +155,7 @@ export class RedoController {
           where: { questionId: question.id, studentId: userId }
         })
         if (mastery) {
-          applyReviewResult(mastery as any, isCorrect)
+          applyScheduledReview(mastery as any, isCorrect)
           await masteryRepository.save(mastery)
         }
       }

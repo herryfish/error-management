@@ -12,6 +12,7 @@
     "migrate": "typeorm migration:run -d dist/config/database.js",
     "migrate:generate": "typeorm migration:generate",
     "migrate:revert": "typeorm migration:revert",
+    "replay:compare": "ts-node scripts/replay-review-compare.ts",
     "test": "jest --forceExit --detectOpenHandles",
     "test:coverage": "jest --coverage --forceExit --detectOpenHandles"
   },
@@ -30,6 +31,7 @@
     "mysql2": "^3.9.2",
     "openai": "^4.104.0",
     "sharp": "^0.33.3",
+    "ts-fsrs": "^6.0.0",
     "typeorm": "^0.3.20",
     "uuid": "^9.0.0"
   },

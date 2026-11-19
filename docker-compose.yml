@@ -51,6 +51,11 @@ services:
       - LLM_FALLBACK_TIMEOUT_MS=${LLM_FALLBACK_TIMEOUT_MS:-30000}
       # 异步任务队列（整页多题识别）；REDIS_URL 留空则自动降级为进程内队列
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      # 复习调度器：ebbinghaus（静态 1/2/4/7/15，默认）| fsrs（FSRS 动态自适应）
+      - REVIEW_SCHEDULER=${REVIEW_SCHEDULER:-ebbinghaus}
+      - FSRS_GRADUATION_DAYS=${FSRS_GRADUATION_DAYS:-30}
+      - FSRS_REQUEST_RETENTION=${FSRS_REQUEST_RETENTION:-0.9}
+      - STUBBORN_INCORRECT_THRESHOLD=${STUBBORN_INCORRECT_THRESHOLD:-3}
     volumes:
       - uploads:/app/uploads
     networks:
