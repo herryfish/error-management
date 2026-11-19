@@ -15,6 +15,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { Mastery, MasteryStatus } from '../models/Mastery'
+import { resolveStudentUserId } from '../utils/resolveStudentUserId'
 import { applyReviewResult, startOfToday, endOfToday } from '../services/ReviewScheduler'
 
 /**
@@ -176,9 +177,11 @@ export class MasteryController {
   ) => {
     try {
       const { studentId } = req.params
+      // 口径归一：接受 students.id 或 users.id（评审 C1）
+      const resolvedStudentId = await resolveStudentUserId(studentId)
 
       const masteryRecords = await this.masteryRepository.find({
-        where: { studentId },
+        where: { studentId: resolvedStudentId },
         relations: ['question'],
         order: { updatedAt: 'DESC' },
       })
@@ -199,11 +202,12 @@ export class MasteryController {
   ) => {
     try {
       const { studentId } = req.params
+      const resolvedStudentId = await resolveStudentUserId(studentId)
 
       const masteryRecords = await this.masteryRepository
         .createQueryBuilder('mastery')
         .leftJoinAndSelect('mastery.question', 'question')
-        .where('mastery.studentId = :studentId', { studentId })
+        .where('mastery.studentId = :studentId', { studentId: resolvedStudentId })
         .andWhere('mastery.status != :status', { status: MasteryStatus.MASTERED })
         .andWhere(
           '((mastery.nextReviewDate IS NOT NULL AND mastery.nextReviewDate <= :endOfToday) OR (mastery.nextReviewDate IS NULL AND mastery.createdAt < :startOfToday))',
@@ -231,28 +235,29 @@ export class MasteryController {
   ) => {
     try {
       const { studentId } = req.params
+      const resolvedStudentId = await resolveStudentUserId(studentId)
 
       const totalQuestions = await this.masteryRepository.count({
-        where: { studentId },
+        where: { studentId: resolvedStudentId },
       })
 
       const masteredQuestions = await this.masteryRepository.count({
         where: {
-          studentId,
+          studentId: resolvedStudentId,
           status: MasteryStatus.MASTERED,
         },
       })
 
       const learningQuestions = await this.masteryRepository.count({
         where: {
-          studentId,
+          studentId: resolvedStudentId,
           status: MasteryStatus.LEARNING,
         },
       })
 
       const newQuestions = await this.masteryRepository.count({
         where: {
-          studentId,
+          studentId: resolvedStudentId,
           status: MasteryStatus.NEW,
         },
       })
@@ -260,7 +265,7 @@ export class MasteryController {
       // 今日待复习：按艾宾浩斯间隔到期的复习数
       const todayDueQuestions = await this.masteryRepository
         .createQueryBuilder('mastery')
-        .where('mastery.studentId = :studentId', { studentId })
+        .where('mastery.studentId = :studentId', { studentId: resolvedStudentId })
         .andWhere('mastery.status != :status', { status: MasteryStatus.MASTERED })
         .andWhere(
           '((mastery.nextReviewDate IS NOT NULL AND mastery.nextReviewDate <= :endOfToday) OR (mastery.nextReviewDate IS NULL AND mastery.createdAt < :startOfToday))',

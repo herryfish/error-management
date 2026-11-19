@@ -123,6 +123,19 @@ describe('IdentificationTaskManager（进程内队列降级模式）', () => {
     expect(await identificationTaskManager.getStatus('no-such-task')).toBeNull()
   })
 
+  it('归属校验（评审 S1）：非本人 taskId 返回 null，本人可读', async () => {
+    processMock.mockResolvedValue({ items: [{ tempId: 't1' }] })
+    const taskId = await identificationTaskManager.submit({
+      imagePath: '/mine.jpg',
+      userId: 'user-a',
+    })
+    await new Promise((r) => setTimeout(r, 30))
+    expect(await identificationTaskManager.getStatus(taskId, 'user-a')).toMatchObject({ taskId })
+    expect(await identificationTaskManager.getStatus(taskId, 'user-b')).toBeNull()
+    // 不传 viewer 时保持兼容（历史行为）
+    expect(await identificationTaskManager.getStatus(taskId)).toMatchObject({ taskId })
+  })
+
   it('任务串行执行（并发 1）', async () => {
     const order: string[] = []
     processMock.mockImplementation(async (_data: any, onProgress: any) => {

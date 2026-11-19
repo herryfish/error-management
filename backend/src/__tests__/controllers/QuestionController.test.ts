@@ -126,6 +126,43 @@ describe('QuestionController', () => {
       const savedData = mockRepo.create.mock.calls[0][0]
       expect(savedData.imageUrl).toBe('/uploads/img-123.jpg')
     })
+
+    it('multipart 场景 errorTags 为 JSON 字符串时应还原数组而非按逗号切分（评审 B2）', async () => {
+      mockRepo.find.mockResolvedValue([])
+      mockRepo.create.mockImplementation((data: any) => data)
+      mockRepo.save.mockImplementation(async (data: any) => data)
+      const res = mockRes()
+      // 与前端 FormData.append(key, JSON.stringify(value)) 完全一致的载荷形状
+      const req = mockReq({
+        title: '带错因题目',
+        content: '计算 2+3',
+        subject: 'math',
+        type: 'choice',
+        difficulty: '1',
+        errorTags: '["审题不清","计算粗心"]',
+      })
+      await controller.createQuestion(req, res, mockNext)
+      const savedData = mockRepo.create.mock.calls[0][0]
+      expect(savedData.errorTags).toEqual(['审题不清', '计算粗心'])
+    })
+
+    it('errorTags 携带非白名单值时被过滤', async () => {
+      mockRepo.find.mockResolvedValue([])
+      mockRepo.create.mockImplementation((data: any) => data)
+      mockRepo.save.mockImplementation(async (data: any) => data)
+      const res = mockRes()
+      const req = mockReq({
+        title: 'T',
+        content: 'C',
+        subject: 'math',
+        type: 'choice',
+        difficulty: '1',
+        errorTags: ['胡写的标签', '公式遗忘'],
+      })
+      await controller.createQuestion(req, res, mockNext)
+      const savedData = mockRepo.create.mock.calls[0][0]
+      expect(savedData.errorTags).toEqual(['公式遗忘'])
+    })
   })
 
   describe('deleteQuestion', () => {

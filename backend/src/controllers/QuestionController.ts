@@ -21,6 +21,7 @@ import { LLMService } from '../services/LLMService'
 import { normalizeErrorTags, mergeErrorTags } from '../constants/errorTags'
 import { processIdentifyMulti } from '../services/tasks/identifyMultiPipeline'
 import { identificationTaskManager } from '../services/tasks/IdentificationTaskManager'
+import { resolveStudentUserId } from '../utils/resolveStudentUserId'
 import { v4 as uuidv4 } from 'uuid'
 
 /**
@@ -126,7 +127,17 @@ export class QuestionController {
       }
 
       // 错因标签（多维度错因体系，白名单校验）
-      const errorTags = normalizeErrorTags(req.body.errorTags)
+      // multipart 场景下数组被序列化为 JSON 字符串（如 '["审题不清"]'），
+      // 先还原再归一，避免被按逗号切分后白名单全滤掉（评审 B2）
+      let rawErrorTags: unknown = req.body.errorTags
+      if (typeof rawErrorTags === 'string') {
+        try {
+          rawErrorTags = JSON.parse(rawErrorTags)
+        } catch {
+          // 非 JSON 字符串：保留原样，normalizeErrorTags 会按逗号切分
+        }
+      }
+      const errorTags = normalizeErrorTags(rawErrorTags)
 
       
       // 错题防重排查：根据 studentId + subject + title/content 校验
@@ -356,9 +367,11 @@ export class QuestionController {
   ) => {
     try {
       const { studentId } = req.params
+      // 口径归一：接受 students.id 或 users.id（评审 C1，详见 utils/resolveStudentUserId）
+      const resolvedStudentId = await resolveStudentUserId(studentId)
 
       const questions = await this.questionRepository.find({
-        where: { studentId },
+        where: { studentId: resolvedStudentId },
         order: { createdAt: 'DESC' },
       })
 
@@ -378,7 +391,10 @@ export class QuestionController {
       const queryBuilder = this.questionRepository.createQueryBuilder('question')
 
       if (studentId) {
-        queryBuilder.where('question.studentId = :studentId', { studentId })
+        // 口径归一：接受 students.id 或 users.id（评审 C1）
+        queryBuilder.where('question.studentId = :studentId', {
+          studentId: await resolveStudentUserId(studentId as string),
+        })
       }
 
       if (subject) {
@@ -415,16 +431,18 @@ export class QuestionController {
   getQuestionStats = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { studentId } = req.params
+      // 口径归一：接受 students.id 或 users.id（评审 C1）
+      const resolvedStudentId = await resolveStudentUserId(studentId)
 
       const total = await this.questionRepository.count({
-        where: { studentId },
+        where: { studentId: resolvedStudentId },
       })
 
       const bySubject = await this.questionRepository
         .createQueryBuilder('question')
         .select('question.subject', 'subject')
         .addSelect('COUNT(*)', 'count')
-        .where('question.studentId = :studentId', { studentId })
+        .where('question.studentId = :studentId', { studentId: resolvedStudentId })
         .groupBy('question.subject')
         .getRawMany()
 
@@ -432,7 +450,7 @@ export class QuestionController {
         .createQueryBuilder('question')
         .select('question.difficulty', 'difficulty')
         .addSelect('COUNT(*)', 'count')
-        .where('question.studentId = :studentId', { studentId })
+        .where('question.studentId = :studentId', { studentId: resolvedStudentId })
         .groupBy('question.difficulty')
         .getRawMany()
 
@@ -531,7 +549,11 @@ export class QuestionController {
     try {
       const { taskId } = req.params
 
-      const task = await identificationTaskManager.getStatus(taskId)
+      // 归属校验（评审建议 S1）：非本人提交的任务与不存在同样返回 404
+      const task = await identificationTaskManager.getStatus(
+        taskId,
+        (req as any).user?.id
+      )
       if (!task) {
         return res.status(404).json({
           status: 'error',

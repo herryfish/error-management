@@ -110,7 +110,6 @@ export class RedoController {
       let isCorrect = false
       let feedback: string | undefined = undefined
       let gradeResult: any = undefined
-      const modelUsed: string | undefined = undefined
 
       if (question) {
         if (question.type === 'answer' || !question.answer) {
@@ -147,7 +146,6 @@ export class RedoController {
         isCorrect,
         feedback,
         gradeResult,
-        modelUsed,
       })
 
       // 联动更新 Mastery 状态（艾宾浩斯间隔调度：第 1/2/4/7/15 天）

@@ -252,9 +252,29 @@ export class AuthController {
         })
       }
 
+      // 家长账号：补充绑定学生的档案 id（students.id），供前端以
+      // `user?.studentId || user?.id` 统一取值查孩子数据（评审 C1）；
+      // 数据端点均已按 utils/resolveStudentUserId 归一两种 id 口径。
+      let studentId = user.studentId
+      if (user.role === UserRole.PARENT && user.parentId) {
+        const parent = await this.parentRepository.findOne({
+          where: { id: user.parentId },
+          relations: ['student'],
+        })
+        if (parent?.student) {
+          studentId = parent.student.id
+        }
+      }
+
       res.json({
         status: 'success',
-        data: user,
+        data: {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          studentId,
+          parentId: user.parentId,
+        },
       })
     } catch (error) {
       next(error)

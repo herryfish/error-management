@@ -30,6 +30,8 @@ export interface TaskStatus {
 
 interface MemoryTask extends TaskStatus {
   createdAt: number
+  /** 提交者 users.id，用于归属校验（评审建议 S1） */
+  userId?: string
 }
 
 /** 完成任务保留时长（供前端轮询），之后清理 */
@@ -90,6 +92,7 @@ class IdentificationTaskManager {
       state: 'queued',
       progress: 0,
       createdAt: Date.now(),
+      userId: data.userId,
     })
     this.memoryChain = this.memoryChain
       .then(() => this.runMemoryTask(taskId, data))
@@ -117,13 +120,20 @@ class IdentificationTaskManager {
     }
   }
 
-  /** 查询任务状态；不存在（或已过期清理）返回 null */
-  async getStatus(taskId: string): Promise<TaskStatus | null> {
+  /**
+   * 查询任务状态；不存在（或已过期清理）返回 null。
+   * 传入 viewerUserId 时校验归属：非本人提交的任务同样返回 null（评审建议 S1，
+   * 避免已登录用户枚举他人 taskId 读取识别内容）。
+   */
+  async getStatus(taskId: string, viewerUserId?: string): Promise<TaskStatus | null> {
     this.init()
 
     if (this.queue) {
       const job = await this.queue.getJob(taskId)
       if (!job) return null
+      if (viewerUserId && job.data?.userId && job.data.userId !== viewerUserId) {
+        return null
+      }
       const bullState = await job.getState()
       const stateMap: Record<string, TaskState> = {
         waiting: 'queued',
@@ -145,6 +155,9 @@ class IdentificationTaskManager {
 
     const task = this.memoryTasks.get(taskId)
     if (!task) return null
+    if (viewerUserId && task.userId && task.userId !== viewerUserId) {
+      return null
+    }
     return {
       taskId: task.taskId,
       state: task.state,

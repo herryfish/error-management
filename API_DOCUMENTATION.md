@@ -435,6 +435,36 @@ Authorization: Bearer <token>
 }
 ```
 
+### PUT /api/questions/:id/error-tags
+
+更新错题的错因标签（多维度错因体系）。标签白名单：`审题不清` / `计算粗心` / `公式遗忘` / `方法缺失` / `其他`；去重后最多 10 个，非法值被过滤。
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "tags": ["审题不清", "计算粗心"],
+  "mode": "merge"
+}
+```
+
+- `mode: "replace"` 全量替换；默认/`"merge"` 与现有标签取并集（重做流程追加标注场景）。
+
+**响应**:
+```json
+{
+  "status": "success",
+  "data": {
+    "id": "uuid",
+    "errorTags": ["审题不清", "计算粗心"]
+  }
+}
+```
+
 ### DELETE /api/questions/:id
 
 删除错题
@@ -1088,6 +1118,33 @@ Authorization: Bearer <token>
       "new": 10
     },
     "masteryRate": 30
+  }
+}
+```
+
+### GET /api/reports/error-profile/:studentId
+
+错因多维度标签画像（评审 C1 后 `studentId` 同时接受登录用户 id（users.id）与学生档案 id（students.id））：返回错因标签分布 + 按错误次数加权的薄弱知识点，供学生端与家长端「薄弱点画像」页使用。
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "data": {
+    "totalQuestions": 50,
+    "taggedQuestions": 32,
+    "errorTagDistribution": [
+      { "tag": "审题不清", "count": 12 },
+      { "tag": "计算粗心", "count": 8 }
+    ],
+    "weakKnowledgePoints": [
+      { "point": "二次函数", "questionCount": 14, "incorrectCount": 9, "totalQuestions": 20 }
+    ]
   }
 }
 ```

@@ -362,10 +362,13 @@ const identifyMultiQuestions = async () => {
 
 const MULTI_POLL_INTERVAL_MS = 2000
 const MULTI_POLL_MAX_MS = 10 * 60 * 1000
+/** 连续网络错误容忍次数：超过才判死（评审建议 S2，容忍短暂抖动） */
+const MULTI_POLL_MAX_CONSECUTIVE_ERRORS = 3
 
 const startMultiPolling = () => {
   stopMultiPolling()
   const startedAt = Date.now()
+  let consecutiveErrors = 0
   multiPollTimer = setInterval(async () => {
     if (Date.now() - startedAt > MULTI_POLL_MAX_MS) {
       stopMultiPolling()
@@ -375,6 +378,7 @@ const startMultiPolling = () => {
     }
     try {
       const task = await questionService.getMultiTaskStatus(multiTaskId.value)
+      consecutiveErrors = 0
       multiTaskState.value = task.state
       multiTaskProgress.value = task.progress || 0
       if (task.state === 'completed') {
@@ -387,10 +391,13 @@ const startMultiPolling = () => {
         multiTaskError.value = task.error || '识别任务失败'
       }
     } catch (err: any) {
-      // 404 等异常视为任务丢失，终止轮询
-      stopMultiPolling()
-      multiTaskState.value = 'failed'
-      multiTaskError.value = err.message || '查询任务状态失败'
+      // 网络抖动容忍：连续多次失败才判死；任务已不存在（404）直接终止
+      consecutiveErrors++
+      if (err?.response?.status === 404 || consecutiveErrors >= MULTI_POLL_MAX_CONSECUTIVE_ERRORS) {
+        stopMultiPolling()
+        multiTaskState.value = 'failed'
+        multiTaskError.value = err.message || '查询任务状态失败'
+      }
     }
   }, MULTI_POLL_INTERVAL_MS)
 }
