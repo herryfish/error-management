@@ -56,6 +56,8 @@ services:
       - FSRS_GRADUATION_DAYS=${FSRS_GRADUATION_DAYS:-30}
       - FSRS_REQUEST_RETENTION=${FSRS_REQUEST_RETENTION:-0.9}
       - STUBBORN_INCORRECT_THRESHOLD=${STUBBORN_INCORRECT_THRESHOLD:-3}
+      # uploads 临时文件 TTL 清理（小时，0 = 关闭）
+      - UPLOADS_TTL_HOURS=${UPLOADS_TTL_HOURS:-72}
     volumes:
       - uploads:/app/uploads
     networks:
