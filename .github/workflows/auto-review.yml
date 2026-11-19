@@ -23,9 +23,11 @@ jobs:
           node-version: '18'
       
       - name: Install dependencies
-        run: |
-          npm ci --prefix backend
-          npm ci --prefix frontend
+        run: npm ci
+      # 注：本仓库为 npm workspaces monorepo，唯一权威 lockfile 是根 package-lock.json
+      # （与 ci.yml 保持一致）。backend/frontend 下的子 lockfile 在 workspaces 模式下
+      # 不会被 npm 维护（ bullmq/vitest 等新依赖只写入根 lockfile），用 npm ci --prefix
+      # 安装会因不同步而失败，故统一走根安装。
       
       - name: Run code analysis
         id: analysis
