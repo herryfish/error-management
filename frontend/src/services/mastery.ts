@@ -36,6 +36,16 @@ export interface Mastery {
   intervalLevel: number
   /** 最后复习日期 */
   lastReviewDate?: string
+  /** FSRS 记忆稳定性（动态调度模式下返回） */
+  stability?: number
+  /** FSRS 记忆难度（动态调度模式下返回） */
+  difficulty?: number
+  /** 本次排程间隔天数（动态调度模式下返回） */
+  scheduledDays?: number
+  /** 顽固薄弱点标记（累计做错 ≥ 阈值自动打标） */
+  isStubborn?: boolean
+  /** 首次打标时间 */
+  stubbornMarkedAt?: string
   /** 题目ID */
   questionId: string
   /** 学生ID */
@@ -66,6 +76,8 @@ export interface MasteryStats {
   newQuestions: number
   /** 今日到期需要复习的题目数 */
   todayDueQuestions?: number
+  /** 顽固薄弱点数（未掌握且累计做错 ≥ 阈值） */
+  stubbornQuestions?: number
   /** 掌握率 */
   masteryRate: number
 }
@@ -118,6 +130,12 @@ export const masteryService = {
 
   async getStats(studentId: string): Promise<MasteryStats> {
     const response = await api.get(`/mastery/student/${studentId}/stats`)
+    return response.data
+  },
+
+  /** 顽固薄弱点列表（学生首页置顶 / 家长周报提示线下定向补课） */
+  async getStubborn(studentId: string): Promise<Mastery[]> {
+    const response = await api.get(`/mastery/student/${studentId}/stubborn`)
     return response.data
   },
 

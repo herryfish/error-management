@@ -13,6 +13,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express'
+import { Not } from 'typeorm'
 import { AppDataSource } from '../config/database'
 import { Mastery, MasteryStatus } from '../models/Mastery'
 import { resolveStudentUserId } from '../utils/resolveStudentUserId'
@@ -276,6 +277,15 @@ export class MasteryController {
         )
         .getCount()
 
+      // 顽固薄弱点数：累计做错 ≥ 阈值自动打标且未掌握（学生首页置顶展示）
+      const stubbornQuestions = await this.masteryRepository.count({
+        where: {
+          studentId: resolvedStudentId,
+          isStubborn: true,
+          status: Not(MasteryStatus.MASTERED),
+        },
+      })
+
       res.json({
         status: 'success',
         data: {
@@ -284,6 +294,7 @@ export class MasteryController {
           learningQuestions,
           newQuestions,
           todayDueQuestions,
+          stubbornQuestions,
           masteryRate:
             totalQuestions > 0
               ? Math.round((masteredQuestions / totalQuestions) * 100)
@@ -312,6 +323,41 @@ export class MasteryController {
       res.json({
         status: 'success',
         data: masteryRecords,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * 顽固薄弱点列表：累计做错 ≥ 阈值自动打标且未掌握的题目
+   * （学生首页置顶 + 家长周报提示线下定向补课，避免系统内机械重试）
+   */
+  getStubbornQuestions = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { studentId } = req.params
+      // 口径归一：接受 students.id 或 users.id（评审 C1）
+      const resolvedStudentId = await resolveStudentUserId(studentId)
+
+      const stubbornRecords = await this.masteryRepository.find({
+        where: {
+          studentId: resolvedStudentId,
+          isStubborn: true,
+        },
+        relations: ['question'],
+        order: { incorrectCount: 'DESC' },
+      })
+
+      // 已掌握的顽固题（曾打标后毕业）不再预警
+      const data = stubbornRecords.filter((m) => m.status !== MasteryStatus.MASTERED)
+
+      res.json({
+        status: 'success',
+        data,
       })
     } catch (error) {
       next(error)

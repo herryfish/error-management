@@ -3,6 +3,7 @@ import {
   EBBINGHAUS_TOTAL_RUNGS,
   EBBINGHAUS_MASTERY_LEVEL,
   applyReviewResult,
+  markStubbornIfNeeded,
   isReviewDue,
   addDays,
   startOfToday,
@@ -16,6 +17,7 @@ const createMastery = (overrides: Partial<Mastery> = {}): Mastery => {
   m.correctCount = 0
   m.incorrectCount = 0
   m.intervalLevel = 0
+  m.isStubborn = false
   return Object.assign(m, overrides)
 }
 
@@ -137,6 +139,31 @@ describe('ReviewScheduler（艾宾浩斯间隔调度）', () => {
       expect(s.getHours()).toBe(0)
       expect(e.getHours()).toBe(23)
       expect(e.getTime() - s.getTime()).toBe(24 * 3600 * 1000 - 1)
+    })
+  })
+
+  describe('顽固薄弱点标记（静态艾宾浩斯路径）', () => {
+    it('累计做错达阈值（默认 3 次）自动打标，首次打标时间记入 stubbornMarkedAt', () => {
+      const m = createMastery()
+      applyReviewResult(m, false, BASE)
+      applyReviewResult(m, false, BASE)
+      expect(m.isStubborn).toBe(false)
+      applyReviewResult(m, false, BASE)
+      expect(m.isStubborn).toBe(true)
+      expect(m.stubbornMarkedAt!.getTime()).toBe(BASE.getTime())
+    })
+
+    it('已掌握状态不触发顽固标记（直接标记函数语义）', () => {
+      const m = createMastery({ status: MasteryStatus.MASTERED, incorrectCount: 5 })
+      markStubbornIfNeeded(m, BASE)
+      expect(m.isStubborn).toBe(false)
+    })
+
+    it('已掌握的题目复习做错 → 回到学习态，累计错误达阈值则重新打标', () => {
+      const m = createMastery({ status: MasteryStatus.MASTERED, incorrectCount: 2 })
+      applyReviewResult(m, false, BASE)
+      expect(m.status).toBe(MasteryStatus.LEARNING)
+      expect(m.isStubborn).toBe(true)
     })
   })
 })
