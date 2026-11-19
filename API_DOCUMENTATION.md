@@ -435,6 +435,36 @@ Authorization: Bearer <token>
 }
 ```
 
+### PUT /api/questions/:id/error-tags
+
+更新错题的错因标签（多维度错因体系）。标签白名单：`审题不清` / `计算粗心` / `公式遗忘` / `方法缺失` / `其他`；去重后最多 10 个，非法值被过滤。
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "tags": ["审题不清", "计算粗心"],
+  "mode": "merge"
+}
+```
+
+- `mode: "replace"` 全量替换；默认/`"merge"` 与现有标签取并集（重做流程追加标注场景）。
+
+**响应**:
+```json
+{
+  "status": "success",
+  "data": {
+    "id": "uuid",
+    "errorTags": ["审题不清", "计算粗心"]
+  }
+}
+```
+
 ### DELETE /api/questions/:id
 
 删除错题
@@ -1092,6 +1122,33 @@ Authorization: Bearer <token>
 }
 ```
 
+### GET /api/reports/error-profile/:studentId
+
+错因多维度标签画像（评审 C1 后 `studentId` 同时接受登录用户 id（users.id）与学生档案 id（students.id））：返回错因标签分布 + 按错误次数加权的薄弱知识点，供学生端与家长端「薄弱点画像」页使用。
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应**:
+```json
+{
+  "status": "success",
+  "data": {
+    "totalQuestions": 50,
+    "taggedQuestions": 32,
+    "errorTagDistribution": [
+      { "tag": "审题不清", "count": 12 },
+      { "tag": "计算粗心", "count": 8 }
+    ],
+    "weakKnowledgePoints": [
+      { "point": "二次函数", "questionCount": 14, "incorrectCount": 9, "totalQuestions": 20 }
+    ]
+  }
+}
+```
+
 ### GET /api/reports/student/:studentId/daily
 
 获取日报
@@ -1126,7 +1183,7 @@ Authorization: Bearer <token>
 ### GET /api/llm/usage/summary
 
 ### POST /api/questions/identify-multi
-大模型多题切分识别接口，支持上传整页图片，自动定位并识别页面中的多道错题。
+大模型多题切分识别接口（同步兼容接口，建议改用异步接口，避免长请求触发 Nginx 504）。
 
 #### 请求
 - Header: `Content-Type: multipart/form-data`
@@ -1136,11 +1193,49 @@ Authorization: Bearer <token>
 ```json
 {
   "status": "success",
-  "data": [
-    { "title": "...", "content": "...", "answer": "...", "bbox": [0,0,100,100] }
-  ]
+  "data": {
+    "items": [
+      { "tempId": "...", "title": "...", "content": "...", "subject": "math", "type": "choice", "answer": "...", "explanation": "...", "isDuplicate": false }
+    ]
+  }
 }
 ```
+
+### POST /api/questions/identify-multi/async
+整页多题识别异步任务提交（推荐）：立即返回 taskId，前端轮询进度与结果，消除 15-30s 同步挂起的 504 风险（见 docs/adr/0004）。
+
+#### 请求
+- Header: `Content-Type: multipart/form-data`
+- Body: `file` (Buffer/Stream)、`subject`（可选，默认 math）
+
+#### 响应（202）
+```json
+{
+  "status": "success",
+  "data": {
+    "taskId": "<uuid>",
+    "statusUrl": "/api/questions/identify-multi/tasks/<uuid>"
+  }
+}
+```
+
+### GET /api/questions/identify-multi/tasks/:taskId
+查询异步识别任务状态（轮询入口，建议 2 秒间隔，超时 10 分钟）。
+
+#### 响应
+```json
+{
+  "status": "success",
+  "data": {
+    "taskId": "<uuid>",
+    "state": "queued | processing | completed | failed",
+    "progress": 55,
+    "result": { "items": [ ... 同同步接口 items 结构 ... ] },
+    "error": "失败原因（仅 failed）"
+  }
+}
+```
+任务不存在或已过期（完成后 1 小时清理）返回 404。
 获取LLM用量汇总
 
 **请求头**:

@@ -8,6 +8,7 @@ import dotenv from 'dotenv'
 import { connectDatabase } from './config/database'
 import { errorHandler } from './middleware/errorHandler'
 import { notFound } from './middleware/notFound'
+import { identificationTaskManager } from './services/tasks/IdentificationTaskManager'
 
 // Routes
 import authRoutes from './routes/auth'
@@ -76,6 +77,8 @@ app.use(errorHandler)
 const startServer = async () => {
   try {
     await connectDatabase()
+    // 启动整页多题识别异步任务队列（REDIS_URL 未配置时自动降级为进程内队列）
+    identificationTaskManager.init()
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`)
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
@@ -85,6 +88,19 @@ const startServer = async () => {
     process.exit(1)
   }
 }
+
+// 优雅关闭：等待识别队列中的任务收尾
+const shutdown = async (signal: string) => {
+  console.log(`Received ${signal}, shutting down...`)
+  try {
+    await identificationTaskManager.close()
+  } catch (e) {
+    console.error('Error during task manager shutdown:', e)
+  }
+  process.exit(0)
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))
 
 startServer()
 

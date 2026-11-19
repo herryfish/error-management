@@ -28,11 +28,19 @@
     
     <van-cell-group inset>
       <van-cell
-        title="今日任务"
+        title="今日待复习"
         is-link
         :value="`${stats.todayTasks}道`"
         @click="$router.push('/tasks')"
-      />
+      >
+        <template #icon>
+          <van-icon
+            name="clock-o"
+            :color="stats.todayTasks > 0 ? '#ee0a24' : '#969799'"
+            style="margin-right: 8px; align-self: center;"
+          />
+        </template>
+      </van-cell>
       <van-cell
         title="掌握进度"
         is-link
@@ -40,13 +48,13 @@
         @click="$router.push('/mastery')"
       />
       <van-cell
-        title="薄弱知识点"
+        title="薄弱点画像"
         is-link
-        :value="`${stats.weakPoints}个`"
-        @click="$router.push('/weak-points')"
+        :value="`${stats.weakPoints}个待巩固`"
+        @click="$router.push('/reports/weakness')"
       />
     </van-cell-group>
-    
+
     <van-cell-group
       inset
       style="margin-top: 16px"

@@ -18,7 +18,9 @@ import { WeeklyReport } from '../models/WeeklyReport'
 import { Question } from '../models/Question'
 import { RedoRecord } from '../models/RedoRecord'
 import { Mastery, MasteryStatus } from '../models/Mastery'
+import { resolveStudentUserId } from '../utils/resolveStudentUserId'
 import { SimilarQuestion } from '../models/SimilarQuestion'
+import { ErrorProfileService } from '../services/ErrorProfileService'
 
 /**
  * 报告控制器类
@@ -133,6 +135,30 @@ export class ReportController {
     }
   }
 
+  /**
+   * 薄弱点画像：错因占比 + 薄弱知识点（学生/家长共用）
+   */
+  getErrorProfile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { studentId } = req.params
+      // 口径归一：接受 students.id 或 users.id（评审 C1）
+      const resolvedStudentId = await resolveStudentUserId(studentId)
+
+      const profile = await new ErrorProfileService().getErrorProfile(resolvedStudentId)
+
+      res.json({
+        status: 'success',
+        data: profile,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
   getDailyReport = async (
     req: Request,
     res: Response,
@@ -140,6 +166,7 @@ export class ReportController {
   ) => {
     try {
       const { studentId } = req.params
+      const resolvedStudentId = await resolveStudentUserId(studentId)
 
       const today = new Date()
       today.setHours(0, 0, 0, 0)
@@ -150,7 +177,7 @@ export class ReportController {
       // Get today's questions
       const questions = await this.questionRepository.find({
         where: {
-          studentId,
+          studentId: resolvedStudentId,
           createdAt: {
             $gte: today,
             $lt: tomorrow,
@@ -161,7 +188,7 @@ export class ReportController {
       // Get today's redos
       const redos = await this.redoRepository.find({
         where: {
-          studentId,
+          studentId: resolvedStudentId,
           createdAt: {
             $gte: today,
             $lt: tomorrow,
@@ -172,7 +199,7 @@ export class ReportController {
       // Get mastery stats
       const masteryStats = await this.masteryRepository
         .createQueryBuilder('mastery')
-        .where('mastery.studentId = :studentId', { studentId })
+        .where('mastery.studentId = :studentId', { studentId: resolvedStudentId })
         .getMany()
 
       const masteredCount = masteryStats.filter(

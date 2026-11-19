@@ -4,7 +4,14 @@
       title="孩子错题明细"
       left-arrow
       @click-left="$router.back()"
-    />
+    >
+      <template #right>
+        <van-icon
+          name="printer"
+          @click="$router.push('/questions/export')"
+        />
+      </template>
+    </van-nav-bar>
 
     <van-tabs
       v-model:active="activeTab"

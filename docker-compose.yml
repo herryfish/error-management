@@ -24,6 +24,8 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -47,12 +49,30 @@ services:
       - LLM_FALLBACK_ENABLED=${LLM_FALLBACK_ENABLED:-true}
       - LLM_FALLBACK_RETRY_COUNT=${LLM_FALLBACK_RETRY_COUNT:-2}
       - LLM_FALLBACK_TIMEOUT_MS=${LLM_FALLBACK_TIMEOUT_MS:-30000}
+      # 异步任务队列（整页多题识别）；REDIS_URL 留空则自动降级为进程内队列
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
     volumes:
       - uploads:/app/uploads
     networks:
       - frontend-net
       - backend-net
     restart: unless-stopped
+
+  # Redis：整页多题识别异步队列（BullMQ）
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - backend-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # MariaDB database
   mariadb:
@@ -97,6 +117,7 @@ services:
 volumes:
   mariadb-data:
   uploads:
+  redis-data:
 
 networks:
   frontend-net:

@@ -39,6 +39,8 @@ export interface Question {
   originalImageUrl?: string
   /** 独立插图URL列表 */
   diagramUrls?: string[]
+  /** 错因标签（审题不清/计算粗心/公式遗忘/方法缺失/其他） */
+  errorTags?: string[]
   /** 参考答案 */
   answer?: string
   /** 解析说明 */
@@ -76,6 +78,8 @@ export interface CreateQuestionRequest {
   difficulty: number
   /** 知识点标签 */
   knowledgePoints: string[]
+  /** 错因标签 */
+  errorTags?: string[]
   /** 参考答案 */
   answer?: string
   /** 解析说明 */
@@ -109,7 +113,7 @@ export const questionService = {
     const formData = new FormData()
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        if (key === 'knowledgePoints') {
+        if (key === 'knowledgePoints' || key === 'errorTags') {
           formData.append(key, JSON.stringify(value))
         } else {
           formData.append(key, String(value))
@@ -146,6 +150,12 @@ export const questionService = {
 
   async update(id: string, data: Partial<CreateQuestionRequest>): Promise<Question> {
     const response = await api.put(`/questions/${id}`, data)
+    return response.data
+  },
+
+  /** 设置错因标签（mode=replace 整组替换；mode=merge 追加，重做后标注用） */
+  async setErrorTags(id: string, tags: string[], mode: 'replace' | 'merge' = 'merge'): Promise<Question> {
+    const response = await api.put(`/questions/${id}/error-tags`, { tags, mode })
     return response.data
   },
 
@@ -196,6 +206,42 @@ export const questionService = {
       throw new Error(result.message || `HTTP ${response.status}`)
     }
     return result.data || result
+  },
+
+  /**
+   * 异步提交整页多题识别：立即返回 taskId，避免同步挂起触发 Nginx 504。
+   * 配合 getMultiTaskStatus 轮询进度与结果。
+   */
+  async identifyMultiAsync(image: File, subject?: string): Promise<{ taskId: string; statusUrl: string }> {
+    const formData = new FormData()
+    formData.append('image', image)
+    if (subject) formData.append('subject', subject)
+
+    const token = localStorage.getItem('token')
+    const response = await fetch('/api/questions/identify-multi/async', {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    })
+    const result = await response.json()
+    if (!response.ok) {
+      throw new Error(result.message || `HTTP ${response.status}`)
+    }
+    return result.data || result
+  },
+
+  /** 查询识别任务状态（queued/processing/completed/failed + 进度 + 结果） */
+  async getMultiTaskStatus(taskId: string): Promise<{
+    taskId: string
+    state: 'queued' | 'processing' | 'completed' | 'failed'
+    progress: number
+    result?: { items: any[] }
+    error?: string
+  }> {
+    const response = await api.get(`/questions/identify-multi/tasks/${taskId}`)
+    return response.data
   },
 
   async createBatch(items: any[]): Promise<Question[]> {

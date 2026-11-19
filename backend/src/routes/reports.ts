@@ -13,6 +13,9 @@ router.get('/weekly/:userId', reportController.getWeeklyReportByUser)
 router.get('/stats', reportController.getStats)
 router.get('/stats/:userId', reportController.getStatsByUser)
 
+// 薄弱点画像（错因占比 + 薄弱知识点，学生/家长共用）
+router.get('/error-profile/:studentId', reportController.getErrorProfile)
+
 // Student-specific routes
 router.get('/student/:studentId/daily', reportController.getDailyReport)
 router.get('/student/:studentId/weekly', reportController.getWeeklyReportByStudent)

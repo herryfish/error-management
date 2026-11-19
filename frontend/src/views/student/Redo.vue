@@ -62,6 +62,43 @@
             </template>
           </van-cell>
         </van-cell-group>
+
+        <!-- 做错后标注错因（多维度错因体系） -->
+        <van-cell-group
+          v-if="!(result.isCorrect === true || result.isCorrect == 1 || result.isCorrect === '1')"
+          inset
+          title="错因标注（帮助生成薄弱点画像）"
+          style="margin-top: 12px;"
+        >
+          <van-cell>
+            <template #label>
+              <van-checkbox-group v-model="selectedErrorTags" direction="horizontal">
+                <van-checkbox
+                  v-for="tag in ERROR_TAG_PRESETS"
+                  :key="tag"
+                  :name="tag"
+                  shape="square"
+                  style="margin-right: 8px; margin-bottom: 4px;"
+                >
+                  {{ tag }}
+                </van-checkbox>
+              </van-checkbox-group>
+            </template>
+          </van-cell>
+          <van-cell>
+            <template #value>
+              <van-button
+                size="small"
+                type="primary"
+                :loading="savingErrorTags"
+                :disabled="selectedErrorTags.length === 0 || errorTagsSaved"
+                @click="saveErrorTags"
+              >
+                {{ errorTagsSaved ? '已记录错因' : '记录错因' }}
+              </van-button>
+            </template>
+          </van-cell>
+        </van-cell-group>
       </div>
     </div>
   </div>
@@ -80,6 +117,26 @@ const question = ref<Question | null>(null)
 const userAnswer = ref('')
 const submitting = ref(false)
 const result = ref<any | null>(null)
+
+// 错因标注（做错后可勾选，追加到题目的错因标签）
+const ERROR_TAG_PRESETS = ['审题不清', '计算粗心', '公式遗忘', '方法缺失', '其他']
+const selectedErrorTags = ref<string[]>([])
+const savingErrorTags = ref(false)
+const errorTagsSaved = ref(false)
+
+const saveErrorTags = async () => {
+  if (!question.value || selectedErrorTags.value.length === 0) return
+  savingErrorTags.value = true
+  try {
+    await questionService.setErrorTags(question.value.id, selectedErrorTags.value, 'merge')
+    errorTagsSaved.value = true
+    showToast('错因已记录，薄弱点画像将同步更新')
+  } catch (e: any) {
+    showToast(e.message || '错因记录失败')
+  } finally {
+    savingErrorTags.value = false
+  }
+}
 
 const getSubjectText = (subject: string) => {
   const texts: Record<string, string> = {

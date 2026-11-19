@@ -40,6 +40,12 @@ export interface Mastery {
   questionId: string
   /** 学生ID */
   studentId: string
+  /** 关联题目（复习队列接口返回） */
+  question?: {
+    id: string
+    title: string
+    content: string
+  }
   /** 创建时间 */
   createdAt: string
   /** 更新时间 */

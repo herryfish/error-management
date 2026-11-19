@@ -1,26 +1,55 @@
 <template>
   <div>
-    <van-nav-bar title="掌握进度" left-arrow @click-left="$router.back()" />
-    <van-cell-group inset style="margin-top: 16px">
-      <van-cell title="总题数" :value="stats.totalQuestions" />
-      <van-cell title="已掌握" :value="`${stats.masteredQuestions} 题`" />
-      <van-cell title="学习中" :value="`${stats.learningQuestions} 题`" />
-      <van-cell title="新题" :value="`${stats.newQuestions} 题`" />
+    <van-nav-bar
+      title="掌握进度"
+      left-arrow
+      @click-left="$router.back()"
+    />
+    <van-cell-group
+      inset
+      style="margin-top: 16px"
+    >
+      <van-cell
+        title="总题数"
+        :value="stats.totalQuestions"
+      />
+      <van-cell
+        title="已掌握"
+        :value="`${stats.masteredQuestions} 题`"
+      />
+      <van-cell
+        title="学习中"
+        :value="`${stats.learningQuestions} 题`"
+      />
+      <van-cell
+        title="新题"
+        :value="`${stats.newQuestions} 题`"
+      />
       <van-cell title="掌握率">
         <template #value>
-          <van-progress :percentage="stats.masteryRate" stroke-width="8" />
+          <van-progress
+            :percentage="stats.masteryRate"
+            stroke-width="8"
+          />
         </template>
       </van-cell>
     </van-cell-group>
 
-    <van-cell-group inset style="margin-top: 16px" title="各状态题目">
-      <van-empty v-if="records.length === 0" description="暂无掌握记录" />
+    <van-cell-group
+      inset
+      style="margin-top: 16px"
+      title="各状态题目"
+    >
+      <van-empty
+        v-if="records.length === 0"
+        description="暂无掌握记录"
+      />
       <van-cell
         v-for="r in records"
         :key="r.id"
         :title="statusText(r.status)"
         :label="`正确 ${r.correctCount} 次 · 错误 ${r.incorrectCount} 次`"
-        :value="r.status === 'mastered' ? '已掌握' : r.status === 'learning' ? '学习中' : '新题'"
+        :value="r.status === 'mastered' ? '已掌握' : r.status === 'learning' ? r.intervalLevel > 0 ? `间隔复习 ${r.intervalLevel}/5 轮` : '学习中新错题' : '新题'"
       />
     </van-cell-group>
   </div>

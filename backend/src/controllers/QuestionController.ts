@@ -18,6 +18,10 @@ import { AppDataSource } from '../config/database'
 import { Question, Subject, QuestionType } from '../models/Question'
 import { Mastery, MasteryStatus } from '../models/Mastery'
 import { LLMService } from '../services/LLMService'
+import { normalizeErrorTags, mergeErrorTags } from '../constants/errorTags'
+import { processIdentifyMulti } from '../services/tasks/identifyMultiPipeline'
+import { identificationTaskManager } from '../services/tasks/IdentificationTaskManager'
+import { resolveStudentUserId } from '../utils/resolveStudentUserId'
 import { v4 as uuidv4 } from 'uuid'
 
 /**
@@ -122,6 +126,19 @@ export class QuestionController {
         }
       }
 
+      // 错因标签（多维度错因体系，白名单校验）
+      // multipart 场景下数组被序列化为 JSON 字符串（如 '["审题不清"]'），
+      // 先还原再归一，避免被按逗号切分后白名单全滤掉（评审 B2）
+      let rawErrorTags: unknown = req.body.errorTags
+      if (typeof rawErrorTags === 'string') {
+        try {
+          rawErrorTags = JSON.parse(rawErrorTags)
+        } catch {
+          // 非 JSON 字符串：保留原样，normalizeErrorTags 会按逗号切分
+        }
+      }
+      const errorTags = normalizeErrorTags(rawErrorTags)
+
       
       // 错题防重排查：根据 studentId + subject + title/content 校验
       const cleanContent = (content || title || '').replace(/[^一-龥a-zA-Z0-9]/g, '');
@@ -150,12 +167,13 @@ export class QuestionController {
         type,
         difficulty: parseInt(difficulty) || 1,
         knowledgePoints: parsedKnowledgePoints,
+        errorTags,
         imageUrl,
         answer,
         explanation,
         studentId: userId,
         isIdentified: false,
-      })
+      } as any)
 
       await this.questionRepository.save(question)
       await this.ensureMasteryRecord((question as any).id, userId)
@@ -185,8 +203,52 @@ export class QuestionController {
         })
       }
 
+      // 错因标签单独校验（白名单），避免任意字段直写
+      if ('errorTags' in updateData) {
+        updateData.errorTags = normalizeErrorTags(updateData.errorTags)
+      }
+
       // Update question
       Object.assign(question, updateData)
+      await this.questionRepository.save(question)
+
+      res.json({
+        status: 'success',
+        data: question,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * 设置错题的错因标签（录入确认/重做后标注错因）
+   * mode=replace：整组替换；mode=merge：在现有标签上追加（重做流程标注）
+   */
+  setQuestionErrorTags = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params
+      const { tags, mode } = req.body
+
+      const question = await this.questionRepository.findOne({
+        where: { id },
+      })
+
+      if (!question) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Question not found',
+        })
+      }
+
+      question.errorTags = mode === 'replace'
+        ? normalizeErrorTags(tags)
+        : mergeErrorTags(question.errorTags, tags)
+
       await this.questionRepository.save(question)
 
       res.json({
@@ -305,9 +367,11 @@ export class QuestionController {
   ) => {
     try {
       const { studentId } = req.params
+      // 口径归一：接受 students.id 或 users.id（评审 C1，详见 utils/resolveStudentUserId）
+      const resolvedStudentId = await resolveStudentUserId(studentId)
 
       const questions = await this.questionRepository.find({
-        where: { studentId },
+        where: { studentId: resolvedStudentId },
         order: { createdAt: 'DESC' },
       })
 
@@ -327,7 +391,10 @@ export class QuestionController {
       const queryBuilder = this.questionRepository.createQueryBuilder('question')
 
       if (studentId) {
-        queryBuilder.where('question.studentId = :studentId', { studentId })
+        // 口径归一：接受 students.id 或 users.id（评审 C1）
+        queryBuilder.where('question.studentId = :studentId', {
+          studentId: await resolveStudentUserId(studentId as string),
+        })
       }
 
       if (subject) {
@@ -364,16 +431,18 @@ export class QuestionController {
   getQuestionStats = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { studentId } = req.params
+      // 口径归一：接受 students.id 或 users.id（评审 C1）
+      const resolvedStudentId = await resolveStudentUserId(studentId)
 
       const total = await this.questionRepository.count({
-        where: { studentId },
+        where: { studentId: resolvedStudentId },
       })
 
       const bySubject = await this.questionRepository
         .createQueryBuilder('question')
         .select('question.subject', 'subject')
         .addSelect('COUNT(*)', 'count')
-        .where('question.studentId = :studentId', { studentId })
+        .where('question.studentId = :studentId', { studentId: resolvedStudentId })
         .groupBy('question.subject')
         .getRawMany()
 
@@ -381,7 +450,7 @@ export class QuestionController {
         .createQueryBuilder('question')
         .select('question.difficulty', 'difficulty')
         .addSelect('COUNT(*)', 'count')
-        .where('question.studentId = :studentId', { studentId })
+        .where('question.studentId = :studentId', { studentId: resolvedStudentId })
         .groupBy('question.difficulty')
         .getRawMany()
 
@@ -414,69 +483,87 @@ export class QuestionController {
       const userId = (req as any).user?.id
       const subject = req.body.subject || Subject.MATH
 
-      let llmItems: any[] = []
-      try {
-        const llmResult = await this.llmService.identifyMultiQuestions(req.file.path, userId)
-        if (Array.isArray(llmResult) && llmResult.length > 0) {
-          llmItems = llmResult.map((item: any, idx: number) => ({
-            tempId: uuidv4(),
-            title: item.title || `识别题目 ${idx + 1}`,
-            content: item.content || '',
-            subject: item.subject || subject,
-            type: item.type || QuestionType.CHOICE,
-            answer: item.answer || '',
-            explanation: item.explanation || '',
-            isDuplicate: false,
-          }))
-        }
-      } catch (err) {
-        console.error('LLM identifyMultiQuestions error:', err)
-      }
-
-      const mockItems = llmItems.length > 0 ? llmItems : [
-        {
-          tempId: uuidv4(),
-          title: '识别题目 1',
-          content: '计算：2 + 3 = ?',
-          subject: subject,
-          type: QuestionType.CHOICE,
-          answer: '5',
-          explanation: '基础加法运算',
-          isDuplicate: false,
-        },
-        {
-          tempId: uuidv4(),
-          title: '识别题目 2',
-          content: '求解方程：x^2 - 4 = 0',
-          subject: subject,
-          type: QuestionType.ANSWER,
-          answer: 'x = ±2',
-          explanation: '因式分解求解',
-          isDuplicate: false,
-        }
-      ]
-
-      // 计算文本指纹防重逻辑
-      for (const item of mockItems) {
-        const fp = (item.title + item.content).replace(/\s+/g, '').replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '')
-        if (userId && fp) {
-          const existingList = await this.questionRepository.find({ where: { studentId: userId, subject: subject as any } })
-          const dup = existingList.find(q => {
-            const qfp = (q.title + q.content).replace(/\s+/g, '').replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '')
-            return qfp === fp
-          })
-          if (dup) {
-            item.isDuplicate = true
-            ;(item as any).existingQuestionId = dup.id
-          }
-        }
-      }
+      // 与异步任务共用同一管道（LLM 识别 → 归一化 → 指纹防重 → 失败兑底 mock）
+      const { items } = await processIdentifyMulti(
+        { imagePath: req.file.path, userId, subject },
+        () => {}
+      )
 
       res.json({
         status: 'success',
         data: {
-          items: mockItems,
+          items,
         },
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * 异步提交整页多题识别任务：立即返回 taskId，前端轮询获取进度与结果。
+   * 解决整页 Vision 识别同步挂起 15-30s+ 触发 Nginx 504 的问题（见 docs/adr/0004）。
+   */
+  submitIdentifyMultiTask = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Please upload an image',
+        })
+      }
+
+      const userId = (req as any).user?.id
+      const subject = req.body.subject || Subject.MATH
+
+      const taskId = await identificationTaskManager.submit({
+        imagePath: req.file.path,
+        userId,
+        subject,
+      })
+
+      res.status(202).json({
+        status: 'success',
+        data: {
+          taskId,
+          statusUrl: `/api/questions/identify-multi/tasks/${taskId}`,
+        },
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * 查询整页多题识别任务状态/进度/结果（前端轮询入口）。
+   */
+  getIdentifyMultiTaskStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { taskId } = req.params
+
+      // 归属校验（评审建议 S1）：非本人提交的任务与不存在同样返回 404
+      const task = await identificationTaskManager.getStatus(
+        taskId,
+        (req as any).user?.id
+      )
+      if (!task) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Task not found or expired',
+        })
+      }
+
+      res.json({
+        status: 'success',
+        data: task,
       })
     } catch (error) {
       next(error)

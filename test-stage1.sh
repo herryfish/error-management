@@ -77,7 +77,7 @@ fi
 # 测试9: 检查数据库迁移
 echo ""
 echo "9. 检查数据库迁移..."
-if [ -f "database/migrations/1710000000000-InitialSchema.ts" ]; then
+if [ -f "backend/src/migrations/1710000000000-InitialSchema.ts" ]; then
     echo "✅ 数据库迁移文件存在"
 else
     echo "❌ 数据库迁移文件不存在"
