@@ -16,6 +16,7 @@ import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { RedoRecord, RedoType } from '../models/RedoRecord'
 import { LLMService } from '../services/LLMService'
+import { applyReviewResult } from '../services/ReviewScheduler'
 
 /**
  * 重做控制器类
@@ -109,7 +110,7 @@ export class RedoController {
       let isCorrect = false
       let feedback: string | undefined = undefined
       let gradeResult: any = undefined
-      let modelUsed: string | undefined = undefined
+      const modelUsed: string | undefined = undefined
 
       if (question) {
         if (question.type === 'answer' || !question.answer) {
@@ -149,36 +150,14 @@ export class RedoController {
         modelUsed,
       })
 
-      // 联动更新 Mastery 状态
+      // 联动更新 Mastery 状态（艾宾浩斯间隔调度：第 1/2/4/7/15 天）
       if (question) {
         const masteryRepository = AppDataSource.getRepository('Mastery')
         const mastery = await masteryRepository.findOne({
           where: { questionId: question.id, studentId: userId }
         })
         if (mastery) {
-          if (isCorrect) {
-            mastery.correctCount += 1
-            mastery.lastCorrectDate = new Date()
-            if (mastery.correctCount >= 3) {
-              mastery.status = 'mastered' as any
-            } else {
-              mastery.status = 'learning' as any
-              mastery.intervalLevel = Math.min(mastery.correctCount, 3)
-            }
-          } else {
-            mastery.incorrectCount += 1
-            mastery.lastIncorrectDate = new Date()
-            mastery.status = 'learning' as any
-            mastery.correctCount = 0
-            mastery.intervalLevel = 0
-          }
-          const intervals = [1, 7, 30]
-          if (mastery.intervalLevel > 0 && mastery.intervalLevel <= intervals.length) {
-            const daysToAdd = intervals[mastery.intervalLevel - 1]
-            mastery.nextReviewDate = new Date()
-            mastery.nextReviewDate.setDate(mastery.nextReviewDate.getDate() + daysToAdd)
-          }
-          mastery.lastReviewDate = new Date()
+          applyReviewResult(mastery as any, isCorrect)
           await masteryRepository.save(mastery)
         }
       }

@@ -49,6 +49,8 @@ describe('MasteryController', () => {
         select: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(0),
         getMany: jest.fn().mockResolvedValue([
           { status: 'mastered', correctCount: 5, incorrectCount: 0 },
           { status: 'learning', correctCount: 2, incorrectCount: 3 },

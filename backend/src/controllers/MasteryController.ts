@@ -15,6 +15,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../config/database'
 import { Mastery, MasteryStatus } from '../models/Mastery'
+import { applyReviewResult, startOfToday, endOfToday } from '../services/ReviewScheduler'
 
 /**
  * 掌握状态控制器类
@@ -154,35 +155,9 @@ export class MasteryController {
         })
       }
 
-      // Update mastery based on review result
-      if (isCorrect) {
-        mastery.correctCount += 1
-        mastery.lastCorrectDate = new Date()
+      // Update mastery based on review result (艾宾浩斯间隔调度：第 1/2/4/7/15 天)
+      applyReviewResult(mastery, isCorrect)
 
-        // Check if mastery condition is met (3 correct in a row with intervals)
-        if (mastery.correctCount >= 3) {
-          mastery.status = MasteryStatus.MASTERED
-        } else {
-          mastery.status = MasteryStatus.LEARNING
-          mastery.intervalLevel = Math.min(mastery.correctCount, 3)
-        }
-      } else {
-        mastery.incorrectCount += 1
-        mastery.lastIncorrectDate = new Date()
-        mastery.status = MasteryStatus.LEARNING
-        mastery.correctCount = 0
-        mastery.intervalLevel = 0
-      }
-
-      // Calculate next review date based on interval level
-      const intervals = [1, 7, 30] // days
-      if (mastery.intervalLevel > 0 && mastery.intervalLevel <= intervals.length) {
-        const daysToAdd = intervals[mastery.intervalLevel - 1]
-        mastery.nextReviewDate = new Date()
-        mastery.nextReviewDate.setDate(mastery.nextReviewDate.getDate() + daysToAdd)
-      }
-
-      mastery.lastReviewDate = new Date()
       await this.masteryRepository.save(mastery)
 
       res.json({
@@ -225,17 +200,17 @@ export class MasteryController {
     try {
       const { studentId } = req.params
 
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-
       const masteryRecords = await this.masteryRepository
         .createQueryBuilder('mastery')
         .leftJoinAndSelect('mastery.question', 'question')
         .where('mastery.studentId = :studentId', { studentId })
         .andWhere('mastery.status != :status', { status: MasteryStatus.MASTERED })
         .andWhere(
-          '(mastery.nextReviewDate IS NULL OR mastery.nextReviewDate <= :today)',
-          { today }
+          '((mastery.nextReviewDate IS NOT NULL AND mastery.nextReviewDate <= :endOfToday) OR (mastery.nextReviewDate IS NULL AND mastery.createdAt < :startOfToday))',
+          {
+            endOfToday: endOfToday(),
+            startOfToday: startOfToday(),
+          }
         )
         .orderBy('mastery.nextReviewDate', 'ASC')
         .getMany()
@@ -282,6 +257,20 @@ export class MasteryController {
         },
       })
 
+      // 今日待复习：按艾宾浩斯间隔到期的复习数
+      const todayDueQuestions = await this.masteryRepository
+        .createQueryBuilder('mastery')
+        .where('mastery.studentId = :studentId', { studentId })
+        .andWhere('mastery.status != :status', { status: MasteryStatus.MASTERED })
+        .andWhere(
+          '((mastery.nextReviewDate IS NOT NULL AND mastery.nextReviewDate <= :endOfToday) OR (mastery.nextReviewDate IS NULL AND mastery.createdAt < :startOfToday))',
+          {
+            endOfToday: endOfToday(),
+            startOfToday: startOfToday(),
+          }
+        )
+        .getCount()
+
       res.json({
         status: 'success',
         data: {
@@ -289,6 +278,7 @@ export class MasteryController {
           masteredQuestions,
           learningQuestions,
           newQuestions,
+          todayDueQuestions,
           masteryRate:
             totalQuestions > 0
               ? Math.round((masteredQuestions / totalQuestions) * 100)

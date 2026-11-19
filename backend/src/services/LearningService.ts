@@ -3,6 +3,7 @@ import { Question } from '../models/Question'
 import { Mastery, MasteryStatus } from '../models/Mastery'
 import { RedoRecord } from '../models/RedoRecord'
 import { SimilarQuestion } from '../models/SimilarQuestion'
+import { startOfToday, endOfToday } from './ReviewScheduler'
 
 export class LearningService {
   private questionRepository = AppDataSource.getRepository(Question)
@@ -27,13 +28,20 @@ export class LearningService {
       .andWhere('mastery.createdAt < :tomorrow', { tomorrow })
       .getMany()
 
-    // Get questions that need review (due for review)
+    // Get questions that need review (due for review，艾宾浩斯间隔到期)
+    // 排除当天新录入（仍在 newQuestions 中）；历史遗留的未安排记录（nextReviewDate 为空且非今日创建）也算到期
     const reviewQuestions = await this.masteryRepository
       .createQueryBuilder('mastery')
       .leftJoinAndSelect('mastery.question', 'question')
       .where('mastery.studentId = :studentId', { studentId })
       .andWhere('mastery.status != :status', { status: MasteryStatus.MASTERED })
-      .andWhere('(mastery.nextReviewDate IS NULL OR mastery.nextReviewDate <= :today)', { today })
+      .andWhere(
+        '((mastery.nextReviewDate IS NOT NULL AND mastery.nextReviewDate <= :endOfToday) OR (mastery.nextReviewDate IS NULL AND mastery.createdAt < :startOfToday))',
+        {
+          endOfToday: endOfToday(today),
+          startOfToday: startOfToday(today),
+        }
+      )
       .orderBy('mastery.nextReviewDate', 'ASC')
       .getMany()
 
