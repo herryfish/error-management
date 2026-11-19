@@ -213,7 +213,7 @@
 | JWT_EXPIRES_IN | JWT过期时间 | 7d |
 | CORS_ORIGIN | CORS来源 | http://localhost:3001 |
 | LLM_PRIMARY_PROVIDER | 主LLM提供商 | openai |
-| LLM_PRIMARY_MODEL | 主LLM模型 | gpt-4-vision-preview |
+| LLM_PRIMARY_MODEL | 主LLM模型 | gpt-4o-mini |
 | LLM_PRIMARY_API_KEY | 主LLM API密钥 | - |
 | LLM_FALLBACK_PROVIDER | 降级LLM提供商 | - |
 | LLM_FALLBACK_MODEL | 降级LLM模型 | - |

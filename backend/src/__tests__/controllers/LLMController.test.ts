@@ -89,7 +89,7 @@ describe('LLMController', () => {
           { scene: 'grading', count: '6', totalTokens: '8000', totalCost: '0', avgLatency: '300' }
         ])
         .mockResolvedValueOnce([
-          { provider: 'openai', model: 'gpt-4-vision-preview', isFallback: false, count: '30', totalTokens: '80000', totalCost: '0' }
+          { provider: 'openai', model: 'gpt-4o-mini', isFallback: false, count: '30', totalTokens: '80000', totalCost: '0' }
         ])
         .mockResolvedValueOnce([
           { date: '2026-08-11', count: '30', totalTokens: '80000', totalCost: '0' }
@@ -114,7 +114,7 @@ describe('LLMController', () => {
             expect.objectContaining({ scene: 'grading', count: 6, totalTokens: 8000 })
           ]),
           modelSummary: expect.arrayContaining([
-            expect.objectContaining({ model: 'gpt-4-vision-preview', count: 30, totalTokens: 80000 })
+            expect.objectContaining({ model: 'gpt-4o-mini', count: 30, totalTokens: 80000 })
           ])
         })
       })

@@ -1,30 +1,52 @@
-# 错题管理系统
+# 错题管理系统（学生错题本）
 
-H5端错题管理系统，学生/家长1:1，支持数理化科目。
+中小学数理化「学生错题管理系统」——H5 端错题本，学生/家长 1:1 使用。
+
+> **项目定位**：这是一套面向 K12（中小学）学生与家长的错题整理、重做与掌握跟踪工具，并非 Sentry 类的错误监控/日志聚合（APM）平台。拍照录入错题 → LLM 切题识别 → 在线/手写重做 → 掌握状态跟踪 → 家长周报，是本系统的核心使用流程。
+
+## 功能特性
+
+### 学生端
+- 拍照/手动录入错题，支持整页多题 LLM 切分识别
+- 在线作答/拍照手写重做
+- 掌握状态跟踪（连续 3 次做对，间隔 1/7/30 天）
+- 今日任务推荐、相似题练习
+
+### 家长端
+- 完全透明查看学生学习情况
+- 周报查看（每周一）、站内红点提醒
+
+### 管理员端
+- LLM 用量监控与告警
+- 系统配置管理、用户管理
 
 ## 技术栈
 
-- **前端**：Vue 3 + TypeScript + Pinia + Vant
-- **后端**：Node.js + Express + TypeScript
-- **ORM**：TypeORM
-- **数据库**：MariaDB
-- **LLM**：支持多提供商配置，允许配置降级模型
-- **部署**：Docker Compose + GitHub Actions
+| 层 | 技术 |
+| --- | --- |
+| 前端 | Vue 3 + TypeScript + Pinia + Vant（H5 移动优先） |
+| 后端 | Node.js + Express + TypeScript |
+| ORM | TypeORM |
+| 数据库 | MariaDB |
+| LLM | 多提供商配置（OpenAI 兼容接口），支持主/降级模型与用量记录 |
+| 部署 | Docker Compose + GitHub Actions CI/CD |
+| 工程 | npm workspaces monorepo |
 
 ## 项目结构
 
 ```
 error-management/
-├── frontend/          # 前端Vue 3应用
-├── backend/           # 后端Express API
+├── frontend/          # 前端 Vue 3 应用
+├── backend/           # 后端 Express API
 ├── database/          # 数据库迁移和初始化脚本
 ├── design/            # 系统设计文档
-├── nginx/             # Nginx配置
-├── .github/workflows/ # GitHub Actions CI/CD
-├── docker-compose.yml # Docker Compose配置
-├── implementation_plan.md # 实现计划
+├── docs/              # ADR 与领域文档
+├── nginx/             # Nginx 反向代理配置
+├── .github/workflows/ # GitHub Actions（CI / 自动发布）
+├── docker-compose.yml # Docker Compose 部署编排
+├── package.json       # 根工作区（npm workspaces，统一 build/test/lint 脚本）
 ├── 错题管理系统_需求确认书_v1.3_完整版.md # 需求文档
-└── AGENTS.md          # 代理工作指南
+└── AGENTS.md          # AI 代理工作指南
 ```
 
 ## 快速开始
@@ -32,79 +54,82 @@ error-management/
 ### 前置要求
 
 - Docker 和 Docker Compose
-- Node.js 18+ (用于本地开发)
+- Node.js 18+（本地开发需要）
 - Git
 
-### 使用Docker Compose运行
+### 使用 Docker Compose 运行
 
 1. 克隆仓库：
+
 ```bash
-git clone <repository-url>
+git clone https://github.com/herryfish/error-management.git
 cd error-management
 ```
 
-2. 复制环境变量文件：
+2. 复制环境变量文件并配置：
+
 ```bash
 cp .env.example .env
+# 编辑 .env，配置数据库密码与 LLM API 密钥
 ```
 
-3. 编辑 `.env` 文件，配置必要的环境变量（特别是LLM API密钥）。
+3. 启动服务：
 
-4. 启动服务：
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-5. 访问应用：
-- 前端：http://localhost:3001
-- 后端API：http://localhost:3000
-- Nginx：http://localhost:80
+4. 访问应用：
+   - 前端：http://localhost:3001
+   - 后端 API：http://localhost:3000
+   - Nginx 统一入口：http://localhost:80
 
-### 本地开发
+## 本地开发
 
-#### 前端开发
+仓库使用 npm workspaces，在根目录安装一次依赖即可同时覆盖前后端：
 
 ```bash
-cd frontend
-npm install
-npm run dev
+npm install          # 根目录执行，安装 frontend/backend 全部依赖
+npm run dev:backend  # 后端开发服务器 http://localhost:3000
+npm run dev:frontend # 前端开发服务器 http://localhost:3001
 ```
 
-前端开发服务器运行在 http://localhost:3001
+统一脚本（均在根目录执行）：
 
-#### 后端开发
+| 命令 | 说明 |
+| --- | --- |
+| `npm run build` | 构建后端（tsc）与前端（vue-tsc + vite build） |
+| `npm run test` | 运行后端单元测试（jest） |
+| `npm run lint` | 前后端 ESLint 检查 |
+| `npm run format` | 前后端 Prettier 格式化 |
+| `npm run migrate` | 运行 TypeORM 数据库迁移 |
+
+也可以分别进入 `frontend/`、`backend/` 目录独立安装与开发（各自保留 `package-lock.json`）。
+
+### 数据库
+
+确保 MariaDB 服务运行（可用 `docker compose up -d mariadb`），然后：
 
 ```bash
-cd backend
-npm install
-npm run dev
-```
-
-后端开发服务器运行在 http://localhost:3000
-
-#### 数据库
-
-确保MariaDB服务运行，然后：
-
-```bash
-cd backend
 npm run migrate
 ```
 
 ## 配置
 
-### LLM配置
+### LLM 配置
 
-系统支持多提供商LLM配置，允许配置主模型和降级模型。
+系统支持多提供商 LLM 配置，允许配置主模型和降级模型。默认主模型为 `gpt-4o-mini`（多模态，可识别错题图片；`gpt-4-vision-preview` 已被 OpenAI 退役）。
 
 #### 环境变量配置
 
 ```env
 # 主LLM配置
 LLM_PRIMARY_PROVIDER=openai
-LLM_PRIMARY_MODEL=gpt-4-vision-preview
+LLM_PRIMARY_MODEL=gpt-4o-mini
 LLM_PRIMARY_API_KEY=sk-your-api-key
 LLM_PRIMARY_API_BASE=https://api.openai.com/v1
+# 主模型调用超时（毫秒，默认 120000）
+LLM_PRIMARY_TIMEOUT_MS=120000
 
 # 降级LLM配置（可选）
 LLM_FALLBACK_PROVIDER=anthropic
@@ -118,16 +143,18 @@ LLM_FALLBACK_RETRY_COUNT=2
 LLM_FALLBACK_TIMEOUT_MS=30000
 ```
 
+超时控制：主模型客户端超时由 `LLM_PRIMARY_TIMEOUT_MS`（默认 120s，为整页多题 Vision 识别留余量）控制；降级客户端超时由 `LLM_FALLBACK_TIMEOUT_MS`（默认 30s）控制。SDK 内部重试已关闭（`maxRetries: 0`），重试与降级由服务层统一编排。
+
 #### 配置文件
 
-也可以使用JSON配置文件（`config.json`）：
+也可以使用 JSON 配置文件（`config.json`）：
 
 ```json
 {
   "llm": {
     "primary": {
       "provider": "openai",
-      "model": "gpt-4-vision-preview",
+      "model": "gpt-4o-mini",
       "apiKey": "sk-your-api-key",
       "apiBase": "https://api.openai.com/v1"
     },
@@ -164,62 +191,42 @@ JWT_EXPIRES_IN=7d
 CORS_ORIGIN=http://localhost:3001
 ```
 
-## 功能特性
-
-### 学生端
-- 拍照/手动录入错题
-- 在线作答/拍照手写重做
-- 掌握状态跟踪（连续3次做对，间隔1/7/30天）
-- 今日任务推荐
-- 相似题练习
-
-### 家长端
-- 完全透明查看学生学习情况
-- 周报查看（每周一）
-- 站内红点提醒
-
-### 管理员端
-- LLM用量监控
-- 系统配置管理
-- 用户管理
-
 ## 开发工作流
 
-### Git工作流
+1. 从 `master` 分支创建功能分支
+2. 开发并提交（提交信息遵循 Conventional Commits：`feat:` / `fix:` / `chore:` 等）
+3. 创建 Pull Request，通过 CI 检查与代码评审
+4. 合入 `master`
 
-1. 从`main`分支创建功能分支
-2. 开发功能并提交
-3. 创建Pull Request
-4. 代码评审
-5. 合并到`develop`分支
-6. 定期合并到`main`分支
+### 自动发布
 
-### CI/CD
+PR 合入 `master` 后，[auto-release 工作流](.github/workflows/auto-release.yml) 自动发布：
 
-使用GitHub Actions进行自动化：
+- 若 PR 已显式修改根目录 `package.json` 的 `version`（与最新 tag 不一致），直接按该版本发布；
+- 否则按提交信息推断 bump 类型（`feat!:` / `BREAKING CHANGE` → major，`feat:` → minor，其余 → patch）。
 
-1. **代码检查**：ESLint、Prettier
-2. **测试**：单元测试、集成测试
-3. **构建**：前端构建、后端编译
-4. **部署**：Docker镜像构建和部署
+发布过程会同步更新根目录、`backend/`、`frontend/` 的 `package.json` 版本号，打 tag 并创建 GitHub Release。
 
-### 变更管理
+### CI
 
-所有变更必须通过：
+GitHub Actions 自动执行：ESLint → 后端单元测试（MariaDB 服务容器）→ 前后端构建；`master` 分支合入后自动通过 SSH 部署到服务器。
 
-1. **提出变更**：通过Issue/变更单模板
-2. **审批**：人工或AI审批
-3. **开发**：实现功能并提交
-4. **CI**：自动构建和测试
-5. **CD**：自动部署到生产环境
+## 贡献指引
+
+- 提交信息遵循 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/)，便于自动发布推断版本号
+- 改动需通过 PR 合入 `master`，CI 绿 + 评审通过后合并
+- 涉及数据库迁移、部署脚本等高风险变更需人工审批
+- `.env` 等密钥文件不入仓库
 
 ## 文档
 
 - [需求文档](错题管理系统_需求确认书_v1.3_完整版.md)
-- [实现计划](implementation_plan.md)
-- [系统设计](design/)
-- [代理工作指南](AGENTS.md)
+- [系统设计](design/architecture.md)
+- [LLM 配置设计](design/llm_config.md)
+- [架构决策记录](docs/adr/)
+- [API 文档](API_DOCUMENTATION.md)
+- [AI 代理工作指南](AGENTS.md)
 
 ## 许可证
 
-私有项目，仅供内部使用。
+[MIT](LICENSE) © herryfish

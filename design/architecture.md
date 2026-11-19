@@ -415,7 +415,7 @@
 ```env
 # 主LLM配置
 LLM_PRIMARY_PROVIDER=openai
-LLM_PRIMARY_MODEL=gpt-4-vision-preview
+LLM_PRIMARY_MODEL=gpt-4o-mini
 LLM_PRIMARY_API_KEY=sk-xxx
 LLM_PRIMARY_API_BASE=https://api.openai.com/v1
 
@@ -437,7 +437,7 @@ LLM_FALLBACK_TIMEOUT_MS=30000
   "llm": {
     "primary": {
       "provider": "openai",
-      "model": "gpt-4-vision-preview",
+      "model": "gpt-4o-mini",
       "apiKey": "sk-xxx",
       "apiBase": "https://api.openai.com/v1"
     },

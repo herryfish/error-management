@@ -1186,7 +1186,7 @@ Authorization: Bearer <token>
   "data": {
     "primary": {
       "provider": "openai",
-      "model": "gpt-4-vision-preview",
+      "model": "gpt-4o-mini",
       "apiBase": "https://api.openai.com/v1"
     },
     "fallback": {

@@ -190,7 +190,7 @@ const saving = ref(false)
 // 视觉模型白名单（只能用于识题场景）
 const VISION_MODELS = [
   { text: 'gpt-4o (OpenAI 旗舰视觉)', value: 'gpt-4o' },
-  { text: 'gpt-4-vision-preview (OpenAI 视觉预检)', value: 'gpt-4-vision-preview' },
+  { text: 'gpt-4o-mini (OpenAI 轻量多模态)', value: 'gpt-4o-mini' },
   { text: 'claude-3-5-sonnet-20240620 (Anthropic 旗舰)', value: 'claude-3-5-sonnet-20240620' },
   { text: 'sensenova-6.7-flash-lite (商汤 识题模型)', value: 'sensenova-6.7-flash-lite' },
 ]

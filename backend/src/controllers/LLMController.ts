@@ -235,7 +235,7 @@ export class LLMController {
       const config = {
         primary: {
           provider: process.env.LLM_PRIMARY_PROVIDER || 'openai',
-          model: process.env.LLM_PRIMARY_MODEL || 'gpt-4-vision-preview',
+          model: process.env.LLM_PRIMARY_MODEL || 'gpt-4o-mini',
           apiBase: process.env.LLM_PRIMARY_API_BASE,
         },
         fallback: process.env.LLM_FALLBACK_PROVIDER

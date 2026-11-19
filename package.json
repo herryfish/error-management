@@ -1,0 +1,23 @@
+{
+  "name": "error-management",
+  "version": "1.2.0",
+  "private": true,
+  "description": "中小学数理化学生错题管理系统（K12 错题本）：拍照录入、LLM 切题识别、重做掌握跟踪、家长周报",
+  "license": "MIT",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "npm run build --workspace backend && npm run build --workspace frontend",
+    "test": "npm run test --workspace backend",
+    "lint": "npm run lint --workspace backend && npm run lint --workspace frontend",
+    "format": "npm run format --workspace backend && npm run format --workspace frontend",
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "migrate": "npm run migrate --workspace backend"
+  }
+}
